@@ -19,7 +19,7 @@ import com.paytm.pgplus.theia.cache.IMerchantMappingService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.constants.TheiaConstant.ExtendedInfoPay;
 import com.paytm.pgplus.theia.constants.TheiaConstant.RetryConstants;
-import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
+//import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.nativ.model.payment.request.NativePaymentRequest;
 import com.paytm.pgplus.theia.nativ.model.payment.request.NativePaymentRequestBody;
 import com.paytm.pgplus.theia.nativ.utils.NativeSessionUtil;
@@ -275,19 +275,24 @@ public class RetryServiceHelper {
         return orderId;
     }
 
-    public NativePaymentRequestBody getNativePaymentRequestBodyByRequest(PaymentRequestBean requestData)
-            throws Exception {
-        String nativeRequestData = IOUtils.toString(((ModifiableHttpServletRequest) requestData.getRequest())
-                .getRequest().getInputStream(), Charsets.UTF_8.name());
-
-        if (StringUtils.isNotBlank(nativeRequestData)) {
-            NativePaymentRequest nativePaymentRequest = JsonMapper.mapJsonToObject(nativeRequestData,
-                    NativePaymentRequest.class);
-            NativePaymentRequestBody nativePaymentRequestBody = nativePaymentRequest.getBody();
-            return nativePaymentRequestBody;
-        }
-        return null;
-    }
+    // public NativePaymentRequestBody
+    // getNativePaymentRequestBodyByRequest(PaymentRequestBean requestData)
+    // throws Exception {
+    // String nativeRequestData =
+    // IOUtils.toString(((ModifiableHttpServletRequest)
+    // requestData.getRequest())
+    // .getRequest().getInputStream(), Charsets.UTF_8.name());
+    //
+    // if (StringUtils.isNotBlank(nativeRequestData)) {
+    // NativePaymentRequest nativePaymentRequest =
+    // JsonMapper.mapJsonToObject(nativeRequestData,
+    // NativePaymentRequest.class);
+    // NativePaymentRequestBody nativePaymentRequestBody =
+    // nativePaymentRequest.getBody();
+    // return nativePaymentRequestBody;
+    // }
+    // return null;
+    // }
 
     public void setNativeCheckOutJsPaymentsDataForRetry(PaymentRequestBean requestData,
             NativePaymentRequestBody nativePaymentRequestBody) throws Exception {

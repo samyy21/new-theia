@@ -29,7 +29,7 @@ import com.paytm.pgplus.theia.logging.ExceptionLogUtils;
 import com.paytm.pgplus.theia.nativ.IOAuthHelper;
 import com.paytm.pgplus.theia.nativ.model.common.NativeInitiateRequest;
 import com.paytm.pgplus.theia.nativ.model.payview.request.NativeCashierInfoRequest;
-import com.paytm.pgplus.theia.nativ.model.token.UpdateTransactionDetailRequest;
+//import com.paytm.pgplus.theia.nativ.model.token.UpdateTransactionDetailRequest;
 import com.paytm.pgplus.theia.nativ.promo.IPromoHelper;
 import com.paytm.pgplus.theia.offline.enums.ResultCode;
 import com.paytm.pgplus.theia.offline.enums.TokenType;
@@ -386,16 +386,20 @@ public class NativeValidationService implements INativeValidationService {
         return false;
     }
 
-    @Override
-    public void validateUpdateTxnDetail(UpdateTransactionDetailRequest request) {
-
-        if (BooleanUtils.isTrue(nativeSessionUtil.getNativeTxnInProcessFlag(request.getHead().getTxnToken()))) {
-            throw RequestValidationException.getException(ResultCode.TXN_ALREADY_IN_PROCESS);
-        }
-        if (request.getBody().getTxnAmount() != null) {
-            validateTxnAmount(request.getBody().getTxnAmount().getValue());
-        }
-    }
+    // @Override
+    // public void validateUpdateTxnDetail(UpdateTransactionDetailRequest
+    // request) {
+    //
+    // if
+    // (BooleanUtils.isTrue(nativeSessionUtil.getNativeTxnInProcessFlag(request.getHead().getTxnToken())))
+    // {
+    // throw
+    // RequestValidationException.getException(ResultCode.TXN_ALREADY_IN_PROCESS);
+    // }
+    // if (request.getBody().getTxnAmount() != null) {
+    // validateTxnAmount(request.getBody().getTxnAmount().getValue());
+    // }
+    // }
 
     @Override
     public UserDetailsBiz validateLoginViaCookie(String mid) {

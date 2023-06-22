@@ -182,11 +182,11 @@
         <property name="ignoreUnresolvablePlaceholders" value="true"/>
     </bean>
 -->
-    <mvc:annotation-driven>
-	  <mvc:return-value-handlers>
-	    <bean class="com.paytm.pgplus.theia.response.handler.AddSignatureReturnValueHandler"/>
-	  </mvc:return-value-handlers>
-	</mvc:annotation-driven>
+<!--    <mvc:annotation-driven>-->
+<!--	  <mvc:return-value-handlers>-->
+<!--	    <bean class="com.paytm.pgplus.theia.response.handler.AddSignatureReturnValueHandler"/>-->
+<!--	  </mvc:return-value-handlers>-->
+<!--	</mvc:annotation-driven>-->
 
     <import resource="classpath:LooperClientContext.xml"/>
     <!-- <import resource="classpath:savedcardclient-context.xml"/> -->

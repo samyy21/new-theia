@@ -99,7 +99,7 @@ import com.paytm.pgplus.theia.dynamicWrapper.model.WrapperTransitionPage;
 import com.paytm.pgplus.theia.exceptions.TheiaControllerException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 import com.paytm.pgplus.theia.helper.LinkBasedPaymentHelper;
-import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
+//import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
@@ -2835,70 +2835,92 @@ public class TheiaResponseGenerator {
         return getFinalHtmlResponse(response);
     }
 
-    public NativeJsonResponse getNativeJsonResponse(WorkFlowResponseBean workFlowResponseBean,
-            PaymentRequestBean requestData, WorkFlowRequestBean workFlowRequestBean) {
-        NativeJsonResponse nativeJsonResponse;
-        if (workFlowResponseBean.isPaymentDone()) {
-            nativeJsonResponse = getNativeJsonResponseForPaymentDone(workFlowResponseBean, requestData);
-        } else if (isVisaSingleClickPayment(workFlowResponseBean)) {
-            LOGGER.info("Processing VISA Single Click payment...");
-            nativeJsonResponse = visaSingleClickPaymentResponse(workFlowResponseBean, requestData);
-        } else {
-            nativeJsonResponse = getNativeJsonBankForm(workFlowResponseBean, requestData, workFlowRequestBean);
-        }
-        if (nativeJsonResponse != null && nativeJsonResponse.getBody() != null) {
-            addRegionalFieldInPTCResponse(nativeJsonResponse.getBody());
-            if (nativeJsonResponse.getBody().getResultInfo() != null) {
-                EventUtils.logResponseCode(V1_PTC, EventNameEnum.RESPONSE_CODE_SENT, nativeJsonResponse.getBody()
-                        .getResultInfo().getResultCode(), nativeJsonResponse.getBody().getResultInfo().getResultMsg());
-            }
-            if (nativeJsonResponse.getBody().getTxnInfo() != null) {
-                EventUtils.logResponseCode(V1_PTC, EventNameEnum.TXNINFO_CODE_SENT, nativeJsonResponse.getBody()
-                        .getTxnInfo().get(RESPCODE), nativeJsonResponse.getBody().getTxnInfo().get(RESPMSG));
-            }
-        }
-        return nativeJsonResponse;
-    }
+    // public NativeJsonResponse getNativeJsonResponse(WorkFlowResponseBean
+    // workFlowResponseBean,
+    // PaymentRequestBean requestData, WorkFlowRequestBean workFlowRequestBean)
+    // {
+    // NativeJsonResponse nativeJsonResponse;
+    // if (workFlowResponseBean.isPaymentDone()) {
+    // nativeJsonResponse =
+    // getNativeJsonResponseForPaymentDone(workFlowResponseBean, requestData);
+    // } else if (isVisaSingleClickPayment(workFlowResponseBean)) {
+    // LOGGER.info("Processing VISA Single Click payment...");
+    // nativeJsonResponse = visaSingleClickPaymentResponse(workFlowResponseBean,
+    // requestData);
+    // } else {
+    // nativeJsonResponse = getNativeJsonBankForm(workFlowResponseBean,
+    // requestData, workFlowRequestBean);
+    // }
+    // if (nativeJsonResponse != null && nativeJsonResponse.getBody() != null) {
+    // addRegionalFieldInPTCResponse(nativeJsonResponse.getBody());
+    // if (nativeJsonResponse.getBody().getResultInfo() != null) {
+    // EventUtils.logResponseCode(V1_PTC, EventNameEnum.RESPONSE_CODE_SENT,
+    // nativeJsonResponse.getBody()
+    // .getResultInfo().getResultCode(),
+    // nativeJsonResponse.getBody().getResultInfo().getResultMsg());
+    // }
+    // if (nativeJsonResponse.getBody().getTxnInfo() != null) {
+    // EventUtils.logResponseCode(V1_PTC, EventNameEnum.TXNINFO_CODE_SENT,
+    // nativeJsonResponse.getBody()
+    // .getTxnInfo().get(RESPCODE),
+    // nativeJsonResponse.getBody().getTxnInfo().get(RESPMSG));
+    // }
+    // }
+    // return nativeJsonResponse;
+    // }
 
-    private NativeJsonResponse visaSingleClickPaymentResponse(WorkFlowResponseBean workFlowResponseBean,
-            PaymentRequestBean requestData) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-                .getRequest();
-
-        Map<String, String[]> txnStatusparamMap = new HashMap<>();
-        NativeJsonResponse nativeJsonResponse = null;
-
-        txnStatusparamMap.put(CASHIER_REQUEST_ID, new String[] { workFlowResponseBean.getCashierRequestId() });
-        txnStatusparamMap.put(TRANS_ID, new String[] { workFlowResponseBean.getTransID() });
-        txnStatusparamMap.put(MERCHANT_ID, new String[] { requestData.getMid() });
-        txnStatusparamMap.put(PAYMENT_MODE, new String[] { requestData.getPaymentTypeId() });
-
-        ModifiableHttpServletRequest modifiableHttpServletRequest = new ModifiableHttpServletRequest(request,
-                txnStatusparamMap);
-
-        Map<String, String> data = transactionStatusServiceImpl.getCashierResponse(modifiableHttpServletRequest);
-
-        try {
-            TransactionResponse txnResp = JsonMapper.mapJsonToObject(data.get("transactionResponse"),
-                    TransactionResponse.class);
-
-            nativeJsonResponse = generateNativeJsonResponseFromTxnResponse(workFlowResponseBean, txnResp, requestData);
-
-            String oneClickInfo = txnResp.getOneClickInfo();
-            if (null != nativeJsonResponse && null != nativeJsonResponse.getBody()
-                    && StringUtils.isNotBlank(oneClickInfo)) {
-                /*
-                 * Know the object from
-                 */
-                Map<String, String> oneClickContent = JsonMapper.mapJsonToObject(oneClickInfo, Map.class);
-                nativeJsonResponse.getBody().setOneClickInfo(oneClickContent);
-            }
-        } catch (Exception e) {
-            LOGGER.error("Exception occured while mapping oneClickInfo Map to JSON :: {}", e);
-        }
-
-        return nativeJsonResponse;
-    }
+    // private NativeJsonResponse
+    // visaSingleClickPaymentResponse(WorkFlowResponseBean workFlowResponseBean,
+    // PaymentRequestBean requestData) {
+    // HttpServletRequest request = ((ServletRequestAttributes)
+    // RequestContextHolder.getRequestAttributes())
+    // .getRequest();
+    //
+    // Map<String, String[]> txnStatusparamMap = new HashMap<>();
+    // NativeJsonResponse nativeJsonResponse = null;
+    //
+    // txnStatusparamMap.put(CASHIER_REQUEST_ID, new String[] {
+    // workFlowResponseBean.getCashierRequestId() });
+    // txnStatusparamMap.put(TRANS_ID, new String[] {
+    // workFlowResponseBean.getTransID() });
+    // txnStatusparamMap.put(MERCHANT_ID, new String[] { requestData.getMid()
+    // });
+    // txnStatusparamMap.put(PAYMENT_MODE, new String[] {
+    // requestData.getPaymentTypeId() });
+    //
+    // ModifiableHttpServletRequest modifiableHttpServletRequest = new
+    // ModifiableHttpServletRequest(request,
+    // txnStatusparamMap);
+    //
+    // Map<String, String> data =
+    // transactionStatusServiceImpl.getCashierResponse(modifiableHttpServletRequest);
+    //
+    // try {
+    // TransactionResponse txnResp =
+    // JsonMapper.mapJsonToObject(data.get("transactionResponse"),
+    // TransactionResponse.class);
+    //
+    // nativeJsonResponse =
+    // generateNativeJsonResponseFromTxnResponse(workFlowResponseBean, txnResp,
+    // requestData);
+    //
+    // String oneClickInfo = txnResp.getOneClickInfo();
+    // if (null != nativeJsonResponse && null != nativeJsonResponse.getBody()
+    // && StringUtils.isNotBlank(oneClickInfo)) {
+    // /*
+    // * Know the object from
+    // */
+    // Map<String, String> oneClickContent =
+    // JsonMapper.mapJsonToObject(oneClickInfo, Map.class);
+    // nativeJsonResponse.getBody().setOneClickInfo(oneClickContent);
+    // }
+    // } catch (Exception e) {
+    // LOGGER.error("Exception occured while mapping oneClickInfo Map to JSON :: {}",
+    // e);
+    // }
+    //
+    // return nativeJsonResponse;
+    // }
 
     private Boolean isVisaSingleClickPayment(WorkFlowResponseBean workFlowResponseBean) {
 

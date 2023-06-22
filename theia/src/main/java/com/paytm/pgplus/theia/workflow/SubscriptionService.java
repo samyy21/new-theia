@@ -19,7 +19,7 @@ import com.paytm.pgplus.theia.constants.ProcessTransactionConstant;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.enums.ValidationResults;
 import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
-import com.paytm.pgplus.theia.services.IJsonResponsePaymentService;
+//import com.paytm.pgplus.theia.services.IJsonResponsePaymentService;
 import com.paytm.pgplus.theia.services.IPaymentService;
 import com.paytm.pgplus.theia.services.ITheiaViewResolverService;
 import com.paytm.pgplus.theia.utils.EventUtils;
@@ -43,17 +43,17 @@ public class SubscriptionService {
     @Qualifier(value = "theiaViewResolverService")
     private ITheiaViewResolverService theiaViewResolverService;
 
-    @Autowired
-    @Qualifier(value = "subscriptionPaymentService")
-    private IPaymentService subscriptionPaymentService;
-
-    @Autowired
-    @Qualifier(value = "subscriptionRenewalService")
-    private IJsonResponsePaymentService subscriptionRenewalService;
-
-    @Autowired
-    @Qualifier("subscriptionS2SPaymentServiceImpl")
-    private IJsonResponsePaymentService subscriptionS2SPaymentService;
+    // @Autowired
+    // @Qualifier(value = "subscriptionPaymentService")
+    // private IPaymentService subscriptionPaymentService;
+    //
+    // @Autowired
+    // @Qualifier(value = "subscriptionRenewalService")
+    // private IJsonResponsePaymentService subscriptionRenewalService;
+    //
+    // @Autowired
+    // @Qualifier("subscriptionS2SPaymentServiceImpl")
+    // private IJsonResponsePaymentService subscriptionS2SPaymentService;
 
     @Autowired
     private TheiaResponseGenerator theiaResponseGenerator;
@@ -64,127 +64,147 @@ public class SubscriptionService {
     @Autowired
     private ISubscriptionService subscriptionService;
 
-    public PageDetailsResponse processSubscriptionRequest(final PaymentRequestBean paymentRequestData, final Model model)
-            throws FacadeCheckedException {
-        PageDetailsResponse processed;
-        PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
-        ValidationResults validationResult;
-        String jspName;
-        String htmlPage;
-
-        boolean isS2SRequest = TheiaConstant.ExtraConstants.CONNECTION_TYPE_S2S.equals(paymentRequestData
-                .getConnectiontype());
-
-        validationResult = subscriptionPaymentService.validatePaymentRequest(paymentRequestData);
-
-        switch (validationResult) {
-        case CHECKSUM_VALIDATION_FAILURE:
-            LOGGER.error(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG, paymentRequestData.getMid());
-            EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
-                    paymentRequestData.getMid(), paymentRequestData.getOrderId());
-            if (isS2SRequest) {
-                pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
-                        model, ResponseConstants.INVALID_CHECKSUM));
-            } else {
-                pageDetailsResponse = theiaResponseGenerator.getPageDetailsResponse(paymentRequestData,
-                        ResponseConstants.INVALID_CHECKSUM);
-            }
-            break;
-        case UNKNOWN_VALIDATION_FAILURE:
-            LOGGER.error(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG, paymentRequestData.getMid());
-            EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
-                    paymentRequestData.getMid(), paymentRequestData.getOrderId());
-            if (isS2SRequest) {
-                pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
-                        model));
-            } else {
-                jspName = theiaViewResolverService.returnOOPSPage(paymentRequestData.getRequest());
-                pageDetailsResponse.setJspName(jspName);
-            }
-            break;
-        case VALIDATION_SUCCESS:
-            if (isS2SRequest) {
-                WorkFlowResponseBean workFlowResponseBean = subscriptionS2SPaymentService
-                        .processPaymentRequest(paymentRequestData);
-
-                if (workFlowResponseBean != null) {
-                    String subscriptionResponse = JsonMapper.mapObjectToJson(workFlowResponseBean
-                            .getSubscriptionRenewalResponse());
-                    LOGGER.info("Response being returned in case of Subscription S2S call is : {} ",
-                            subscriptionResponse);
-                    pageDetailsResponse.setS2sResponse(subscriptionS2SPaymentService
-                            .getResponseWithChecksumForJsonResponse(subscriptionResponse,
-                                    paymentRequestData.getClientId()));
-                }
-                break;
-            }
-            processed = subscriptionPaymentService.processPaymentRequest(paymentRequestData, model);
-
-            if (processed.isSuccessfullyProcessed()) {
-                jspName = theiaViewResolverService.returnPaymentPage(paymentRequestData.getRequest());
-                pageDetailsResponse.setJspName(jspName);
-                break;
-            }
-            /* if Html Page is Returned */
-            if (StringUtils.isNotBlank(processed.getHtmlPage())) {
-                htmlPage = processed.getHtmlPage();
-                pageDetailsResponse.setHtmlPage(htmlPage);
-                break;
-            }
-            break;
-
-        default:
-            break;
-        }
-        return pageDetailsResponse;
-    }
-
-    public PageDetailsResponse processRenewSubscriptionRequest(final PaymentRequestBean paymentRequestData,
-            final Model model) throws FacadeCheckedException {
-        PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
-
-        ValidationResults validationResult = subscriptionRenewalService.validatePaymentRequest(paymentRequestData);
-
-        switch (validationResult) {
-        case CHECKSUM_VALIDATION_FAILURE:
-            LOGGER.error(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG, paymentRequestData.getMid());
-            EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
-                    paymentRequestData.getMid(), paymentRequestData.getOrderId());
-            pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData, model,
-                    ResponseConstants.INVALID_CHECKSUM));
-            break;
-        case UNKNOWN_VALIDATION_FAILURE:
-            LOGGER.error(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG, paymentRequestData.getMid());
-            EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
-                    paymentRequestData.getMid(), paymentRequestData.getOrderId());
-            pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData, model));
-            break;
-        case VALIDATION_SUCCESS:
-            String renewResponse = "";
-
-            if (ff4jUtils.isFeatureEnabledOnMid(paymentRequestData.getMid(), REDIRECT_TO_NEW_RENEW_API, false)) {
-                renewResponse = subscriptionRenewalResponse(paymentRequestData);
-            } else {
-                WorkFlowResponseBean workFlowResponseBean = subscriptionRenewalService
-                        .processPaymentRequest(paymentRequestData);
-
-                if (workFlowResponseBean != null) {
-                    workFlowResponseBean.getSubscriptionRenewalResponse().setTxnAmount(
-                            AmountUtils.getTransactionAmountInRupee(workFlowResponseBean
-                                    .getSubscriptionRenewalResponse().getTxnAmount()));
-                    renewResponse = JsonMapper.mapObjectToJson(workFlowResponseBean.getSubscriptionRenewalResponse());
-
-                }
-            }
-            LOGGER.info("Response being returned in case of Renew is : {} ", renewResponse);
-            pageDetailsResponse.setS2sResponse(subscriptionRenewalService.getResponseWithChecksumForJsonResponse(
-                    renewResponse, paymentRequestData.getClientId()));
-            break;
-        default:
-            break;
-        }
-        return pageDetailsResponse;
-    }
+    // public PageDetailsResponse processSubscriptionRequest(final
+    // PaymentRequestBean paymentRequestData, final Model model)
+    // throws FacadeCheckedException {
+    // PageDetailsResponse processed;
+    // PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
+    // ValidationResults validationResult;
+    // String jspName;
+    // String htmlPage;
+    //
+    // boolean isS2SRequest =
+    // TheiaConstant.ExtraConstants.CONNECTION_TYPE_S2S.equals(paymentRequestData
+    // .getConnectiontype());
+    //
+    // validationResult =
+    // subscriptionPaymentService.validatePaymentRequest(paymentRequestData);
+    //
+    // switch (validationResult) {
+    // case CHECKSUM_VALIDATION_FAILURE:
+    // LOGGER.error(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
+    // paymentRequestData.getMid());
+    // EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
+    // paymentRequestData.getMid(), paymentRequestData.getOrderId());
+    // if (isS2SRequest) {
+    // pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
+    // model, ResponseConstants.INVALID_CHECKSUM));
+    // } else {
+    // pageDetailsResponse =
+    // theiaResponseGenerator.getPageDetailsResponse(paymentRequestData,
+    // ResponseConstants.INVALID_CHECKSUM);
+    // }
+    // break;
+    // case UNKNOWN_VALIDATION_FAILURE:
+    // LOGGER.error(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
+    // paymentRequestData.getMid());
+    // EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
+    // paymentRequestData.getMid(), paymentRequestData.getOrderId());
+    // if (isS2SRequest) {
+    // pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
+    // model));
+    // } else {
+    // jspName =
+    // theiaViewResolverService.returnOOPSPage(paymentRequestData.getRequest());
+    // pageDetailsResponse.setJspName(jspName);
+    // }
+    // break;
+    // case VALIDATION_SUCCESS:
+    // if (isS2SRequest) {
+    // WorkFlowResponseBean workFlowResponseBean = subscriptionS2SPaymentService
+    // .processPaymentRequest(paymentRequestData);
+    //
+    // if (workFlowResponseBean != null) {
+    // String subscriptionResponse =
+    // JsonMapper.mapObjectToJson(workFlowResponseBean
+    // .getSubscriptionRenewalResponse());
+    // LOGGER.info("Response being returned in case of Subscription S2S call is : {} ",
+    // subscriptionResponse);
+    // pageDetailsResponse.setS2sResponse(subscriptionS2SPaymentService
+    // .getResponseWithChecksumForJsonResponse(subscriptionResponse,
+    // paymentRequestData.getClientId()));
+    // }
+    // break;
+    // }
+    // processed =
+    // subscriptionPaymentService.processPaymentRequest(paymentRequestData,
+    // model);
+    //
+    // if (processed.isSuccessfullyProcessed()) {
+    // jspName =
+    // theiaViewResolverService.returnPaymentPage(paymentRequestData.getRequest());
+    // pageDetailsResponse.setJspName(jspName);
+    // break;
+    // }
+    // /* if Html Page is Returned */
+    // if (StringUtils.isNotBlank(processed.getHtmlPage())) {
+    // htmlPage = processed.getHtmlPage();
+    // pageDetailsResponse.setHtmlPage(htmlPage);
+    // break;
+    // }
+    // break;
+    //
+    // default:
+    // break;
+    // }
+    // return pageDetailsResponse;
+    // }
+    //
+    // public PageDetailsResponse processRenewSubscriptionRequest(final
+    // PaymentRequestBean paymentRequestData,
+    // final Model model) throws FacadeCheckedException {
+    // PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
+    //
+    // ValidationResults validationResult =
+    // subscriptionRenewalService.validatePaymentRequest(paymentRequestData);
+    //
+    // switch (validationResult) {
+    // case CHECKSUM_VALIDATION_FAILURE:
+    // LOGGER.error(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
+    // paymentRequestData.getMid());
+    // EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_FAILED_ERROR_MSG,
+    // paymentRequestData.getMid(), paymentRequestData.getOrderId());
+    // pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
+    // model,
+    // ResponseConstants.INVALID_CHECKSUM));
+    // break;
+    // case UNKNOWN_VALIDATION_FAILURE:
+    // LOGGER.error(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
+    // paymentRequestData.getMid());
+    // EventUtils.pushChecksumFailureEvent(ProcessTransactionConstant.CHECKSUM_UNKNOWN_ERROR_MSG,
+    // paymentRequestData.getMid(), paymentRequestData.getOrderId());
+    // pageDetailsResponse.setS2sResponse(ProcessTransactionHelper.processForS2SError(paymentRequestData,
+    // model));
+    // break;
+    // case VALIDATION_SUCCESS:
+    // String renewResponse = "";
+    //
+    // if (ff4jUtils.isFeatureEnabledOnMid(paymentRequestData.getMid(),
+    // REDIRECT_TO_NEW_RENEW_API, false)) {
+    // renewResponse = subscriptionRenewalResponse(paymentRequestData);
+    // } else {
+    // WorkFlowResponseBean workFlowResponseBean = subscriptionRenewalService
+    // .processPaymentRequest(paymentRequestData);
+    //
+    // if (workFlowResponseBean != null) {
+    // workFlowResponseBean.getSubscriptionRenewalResponse().setTxnAmount(
+    // AmountUtils.getTransactionAmountInRupee(workFlowResponseBean
+    // .getSubscriptionRenewalResponse().getTxnAmount()));
+    // renewResponse =
+    // JsonMapper.mapObjectToJson(workFlowResponseBean.getSubscriptionRenewalResponse());
+    //
+    // }
+    // }
+    // LOGGER.info("Response being returned in case of Renew is : {} ",
+    // renewResponse);
+    // pageDetailsResponse.setS2sResponse(subscriptionRenewalService.getResponseWithChecksumForJsonResponse(
+    // renewResponse, paymentRequestData.getClientId()));
+    // break;
+    // default:
+    // break;
+    // }
+    // return pageDetailsResponse;
+    // }
 
     public String subscriptionRenewalResponse(PaymentRequestBean paymentRequestData) throws FacadeCheckedException {
         String renewResponse = "";

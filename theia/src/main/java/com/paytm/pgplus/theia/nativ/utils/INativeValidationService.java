@@ -7,7 +7,7 @@ import com.paytm.pgplus.request.InitiateTransactionRequestBody;
 import com.paytm.pgplus.theia.accesstoken.model.request.CreateAccessTokenServiceRequest;
 import com.paytm.pgplus.theia.nativ.model.common.NativeInitiateRequest;
 import com.paytm.pgplus.theia.nativ.model.payview.request.NativeCashierInfoRequest;
-import com.paytm.pgplus.theia.nativ.model.token.UpdateTransactionDetailRequest;
+//import com.paytm.pgplus.theia.nativ.model.token.UpdateTransactionDetailRequest;
 import com.paytm.pgplus.theia.offline.enums.TokenType;
 
 public interface INativeValidationService {
@@ -36,7 +36,7 @@ public interface INativeValidationService {
 
     boolean validatePromoCode(InitiateTransactionRequest request);
 
-    void validateUpdateTxnDetail(UpdateTransactionDetailRequest request);
+    // void validateUpdateTxnDetail(UpdateTransactionDetailRequest request);
 
     UserDetailsBiz validateLoginViaCookie(String mid);
 

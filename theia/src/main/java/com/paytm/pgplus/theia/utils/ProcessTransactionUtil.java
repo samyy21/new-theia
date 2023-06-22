@@ -86,7 +86,7 @@ import com.paytm.pgplus.theia.emiSubvention.helper.SubventionEmiServiceHelper;
 import com.paytm.pgplus.theia.enums.ELitePayViewDisabledReasonMsg;
 import com.paytm.pgplus.theia.exceptions.RiskRejectException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
-import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
+//import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.models.NativeJsonRequest;
 import com.paytm.pgplus.theia.models.UserAgentInfo;
 import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
@@ -2772,48 +2772,56 @@ public class ProcessTransactionUtil {
         // }
     }
 
-    public boolean isNativeKycFlow(HttpServletRequest request) {
-        return StringUtils.isNotBlank(request.getParameter(KYC_FLOW))
-                && request.getParameter(KYC_FLOW).equalsIgnoreCase("YES");
-    }
+    // public boolean isNativeKycFlow(HttpServletRequest request) {
+    // return StringUtils.isNotBlank(request.getParameter(KYC_FLOW))
+    // && request.getParameter(KYC_FLOW).equalsIgnoreCase("YES");
+    // }
 
-    private NativeKYCDetailResponse doKycInNative(HttpServletRequest request, HttpServletResponse response)
-            throws Exception {
-        LOGGER.info("Request received for native kyc");
-        NativeKYCDetailRequest nativeKYCDetailRequest = new NativeKYCDetailRequest();
-        TokenRequestHeader tokenRequestHeader = new TokenRequestHeader();
-        tokenRequestHeader.setTxnToken(request.getParameter(KYC_TXN_ID));
-        String kycNameOnDoc = request.getParameter(KYC_NAME_ON_DOC);
-        String kycDocCode = request.getParameter(KYC_DOC_CODE);
-        String kycDocValue = request.getParameter(KYC_DOC_VALUE);
-        NativeKYCDetailRequestBody nativeKYCDetailRequestBody = new NativeKYCDetailRequestBody(kycNameOnDoc,
-                kycDocCode, kycDocValue);
-        nativeKYCDetailRequest.setHead(tokenRequestHeader);
-        nativeKYCDetailRequest.setBody(nativeKYCDetailRequestBody);
-        IRequestProcessor<NativeKYCDetailRequest, NativeKYCDetailResponse> requestProcessor = requestProcessorFactory
-                .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_KYC_REQUEST);
-        NativeKYCDetailResponse nativeKYCDetailResponse = requestProcessor.process(nativeKYCDetailRequest);
-        String kycKey = "Native_KYC_" + request.getParameter(KYC_TXN_ID);
-        Map<String, String[]> additionalParams = (Map<String, String[]>) nativeSessionUtil.getKey(kycKey);
-        if (additionalParams == null) {
-            throw new TheiaServiceException("no data in cache for kyc in native");
-        }
-        if (!nativeKYCDetailResponse.getBody().isKycSuccessful()) {
-            if (nativeKYCDetailResponse.getBody().getKycRetryCount() < 0) {
-                PaymentRequestBean paymentRequestData = new PaymentRequestBean(new ModifiableHttpServletRequest(
-                        request, additionalParams));
-                LOGGER.info("Retry limit reached for KYC on boarding flow");
-                String html = merchantResponseService.processMerchantFailResponse(paymentRequestData,
-                        ResponseConstants.MERCHANT_FAILURE_RESPONSE);
-                response.getOutputStream().print(html);
-                response.setContentType("text/html");
-            } else {
-                prepareKycRetryData(additionalParams, request, nativeKYCDetailResponse);
-                loadNativeKycPage(request, response);
-            }
-        }
-        return nativeKYCDetailResponse;
-    }
+    // private NativeKYCDetailResponse doKycInNative(HttpServletRequest request,
+    // HttpServletResponse response)
+    // throws Exception {
+    // LOGGER.info("Request received for native kyc");
+    // NativeKYCDetailRequest nativeKYCDetailRequest = new
+    // NativeKYCDetailRequest();
+    // TokenRequestHeader tokenRequestHeader = new TokenRequestHeader();
+    // tokenRequestHeader.setTxnToken(request.getParameter(KYC_TXN_ID));
+    // String kycNameOnDoc = request.getParameter(KYC_NAME_ON_DOC);
+    // String kycDocCode = request.getParameter(KYC_DOC_CODE);
+    // String kycDocValue = request.getParameter(KYC_DOC_VALUE);
+    // NativeKYCDetailRequestBody nativeKYCDetailRequestBody = new
+    // NativeKYCDetailRequestBody(kycNameOnDoc,
+    // kycDocCode, kycDocValue);
+    // nativeKYCDetailRequest.setHead(tokenRequestHeader);
+    // nativeKYCDetailRequest.setBody(nativeKYCDetailRequestBody);
+    // IRequestProcessor<NativeKYCDetailRequest, NativeKYCDetailResponse>
+    // requestProcessor = requestProcessorFactory
+    // .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_KYC_REQUEST);
+    // NativeKYCDetailResponse nativeKYCDetailResponse =
+    // requestProcessor.process(nativeKYCDetailRequest);
+    // String kycKey = "Native_KYC_" + request.getParameter(KYC_TXN_ID);
+    // Map<String, String[]> additionalParams = (Map<String, String[]>)
+    // nativeSessionUtil.getKey(kycKey);
+    // if (additionalParams == null) {
+    // throw new TheiaServiceException("no data in cache for kyc in native");
+    // }
+    // if (!nativeKYCDetailResponse.getBody().isKycSuccessful()) {
+    // if (nativeKYCDetailResponse.getBody().getKycRetryCount() < 0) {
+    // PaymentRequestBean paymentRequestData = new PaymentRequestBean(new
+    // ModifiableHttpServletRequest(
+    // request, additionalParams));
+    // LOGGER.info("Retry limit reached for KYC on boarding flow");
+    // String html =
+    // merchantResponseService.processMerchantFailResponse(paymentRequestData,
+    // ResponseConstants.MERCHANT_FAILURE_RESPONSE);
+    // response.getOutputStream().print(html);
+    // response.setContentType("text/html");
+    // } else {
+    // prepareKycRetryData(additionalParams, request, nativeKYCDetailResponse);
+    // loadNativeKycPage(request, response);
+    // }
+    // }
+    // return nativeKYCDetailResponse;
+    // }
 
     private void prepareKycRetryData(Map<String, String[]> additionalParams, HttpServletRequest request,
             NativeKYCDetailResponse nativeKYCDetailResponse) {
@@ -2837,32 +2845,36 @@ public class ProcessTransactionUtil {
                 request, response);
     }
 
-    public boolean processNativeKycFlow(HttpServletRequest request, HttpServletResponse response,
-            Map<String, String[]> additionalParams) throws Exception {
-
-        Map<String, String[]> params = null;
-
-        NativeKYCDetailResponse nativeKYCDetailResponse = doKycInNative(request, response);
-        if (!nativeKYCDetailResponse.getBody().isKycSuccessful()) {
-            return false;
-        }
-        String txnToken = request.getParameter(KYC_TXN_ID);
-        String kycKey = "Native_KYC_" + txnToken;
-        params = (Map<String, String[]>) nativeSessionUtil.getKey(kycKey);
-        if (params == null) {
-            failureLogUtil.setFailureMsgForDwhPush(null,
-                    BizConstant.FailureLogs.NO_DATA_IN_CACHE_AFTER_NATIVE_KYC_COMPLETION, null, true);
-
-            throw new TheiaServiceException(BizConstant.FailureLogs.NO_DATA_IN_CACHE_AFTER_NATIVE_KYC_COMPLETION);
-        }
-        // should work as redirection
-        params.remove(NATIVE_JSON_REQUEST);
-
-        request.setAttribute(Native.TXN_TOKEN, txnToken);
-
-        additionalParams.putAll(params);
-        return true;
-    }
+    // public boolean processNativeKycFlow(HttpServletRequest request,
+    // HttpServletResponse response,
+    // Map<String, String[]> additionalParams) throws Exception {
+    //
+    // Map<String, String[]> params = null;
+    //
+    // NativeKYCDetailResponse nativeKYCDetailResponse = doKycInNative(request,
+    // response);
+    // if (!nativeKYCDetailResponse.getBody().isKycSuccessful()) {
+    // return false;
+    // }
+    // String txnToken = request.getParameter(KYC_TXN_ID);
+    // String kycKey = "Native_KYC_" + txnToken;
+    // params = (Map<String, String[]>) nativeSessionUtil.getKey(kycKey);
+    // if (params == null) {
+    // failureLogUtil.setFailureMsgForDwhPush(null,
+    // BizConstant.FailureLogs.NO_DATA_IN_CACHE_AFTER_NATIVE_KYC_COMPLETION,
+    // null, true);
+    //
+    // throw new
+    // TheiaServiceException(BizConstant.FailureLogs.NO_DATA_IN_CACHE_AFTER_NATIVE_KYC_COMPLETION);
+    // }
+    // // should work as redirection
+    // params.remove(NATIVE_JSON_REQUEST);
+    //
+    // request.setAttribute(Native.TXN_TOKEN, txnToken);
+    //
+    // additionalParams.putAll(params);
+    // return true;
+    // }
 
     private NativeInitiateRequest createNativeInitiateRequestForSsoFLow(HttpServletRequest request) throws Exception {
         if (!(AOA_WORKFLOW).equals(request.getParameter(Native.WORKFLOW))) {

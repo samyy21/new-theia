@@ -16,7 +16,7 @@ import com.paytm.pgplus.pgproxycommon.models.GenericCoreResponseBean;
 import com.paytm.pgplus.request.InitiateTransactionRequestBody;
 import com.paytm.pgplus.theia.cache.IMerchantPreferenceService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
-import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
+//import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.nativ.exception.NativeFlowException;
 import com.paytm.pgplus.theia.nativ.model.common.TokenRequestHeader;
@@ -504,45 +504,60 @@ public class NativeDirectBankPageHelper {
         return isPropertyAllowed;
     }
 
-    public void setParamsForCashierResponseInHttpRequest(NativeDirectBankPageRequest request,
-            NativeDirectBankPageServiceRequest serviceRequest, NativeDirectBankPageServiceResponse serviceResponse) {
-        Map<String, String[]> paramMap = new HashMap<>();
-
-        if (StringUtils.equals(submit.getType(), request.getBody().getRequestType())) {
-            if (canRetryForDirectBankSubmit(serviceRequest)) {
-                paramMap.put(DIRECT_BANK_PAGE_RETRY, new String[] { Boolean.TRUE.toString() });
-            }
-            paramMap.put(DIRECT_BANK_PAGE_SUBMIT_REQUEST, new String[] { Boolean.TRUE.toString() });
-        }
-
-        if (isApiRequestOriginPG(request)) {
-            /*
-             * Here, we get these fields from instaProxy in response to its api
-             * hit
-             */
-            String txnToken = request.getHead().getTxnToken();
-
-            paramMap.put(CASHIER_REQUEST_ID, new String[] { nativeSessionUtil.getCashierRequestId(txnToken) });
-            paramMap.put(TRANS_ID, new String[] { request.getBody().getAcquirementId() });
-            paramMap.put(MERCHANT_ID, new String[] { serviceRequest.getOrderDetail().getMid() });
-            paramMap.put(PAYMENT_MODE, new String[] { nativeSessionUtil.getPaymentTypeId(txnToken) });
-
-        } else {
-            /*
-             * Here, we fetch these fields form cache, nativePlus case!
-             */
-            paramMap.put(CASHIER_REQUEST_ID, new String[] { serviceRequest.getCachedBankFormData()
-                    .getCashierRequestId() });
-            paramMap.put(TRANS_ID, new String[] { serviceRequest.getCachedBankFormData().getTransId() });
-            paramMap.put(MERCHANT_ID, new String[] { serviceRequest.getCachedBankFormData().getMerchantId() });
-            paramMap.put(PAYMENT_MODE, new String[] { serviceResponse.getFormDetail().getContent().get(PAYMENT_MODE) });
-        }
-
-        ModifiableHttpServletRequest modifiableHttpServletRequest = new ModifiableHttpServletRequest(
-                request.getHttpServletRequest(), paramMap);
-
-        request.setHttpServletRequest(modifiableHttpServletRequest);
-    }
+    // public void
+    // setParamsForCashierResponseInHttpRequest(NativeDirectBankPageRequest
+    // request,
+    // NativeDirectBankPageServiceRequest serviceRequest,
+    // NativeDirectBankPageServiceResponse serviceResponse) {
+    // Map<String, String[]> paramMap = new HashMap<>();
+    //
+    // if (StringUtils.equals(submit.getType(),
+    // request.getBody().getRequestType())) {
+    // if (canRetryForDirectBankSubmit(serviceRequest)) {
+    // paramMap.put(DIRECT_BANK_PAGE_RETRY, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    // paramMap.put(DIRECT_BANK_PAGE_SUBMIT_REQUEST, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    //
+    // if (isApiRequestOriginPG(request)) {
+    // /*
+    // * Here, we get these fields from instaProxy in response to its api
+    // * hit
+    // */
+    // String txnToken = request.getHead().getTxnToken();
+    //
+    // paramMap.put(CASHIER_REQUEST_ID, new String[] {
+    // nativeSessionUtil.getCashierRequestId(txnToken) });
+    // paramMap.put(TRANS_ID, new String[] {
+    // request.getBody().getAcquirementId() });
+    // paramMap.put(MERCHANT_ID, new String[] {
+    // serviceRequest.getOrderDetail().getMid() });
+    // paramMap.put(PAYMENT_MODE, new String[] {
+    // nativeSessionUtil.getPaymentTypeId(txnToken) });
+    //
+    // } else {
+    // /*
+    // * Here, we fetch these fields form cache, nativePlus case!
+    // */
+    // paramMap.put(CASHIER_REQUEST_ID, new String[] {
+    // serviceRequest.getCachedBankFormData()
+    // .getCashierRequestId() });
+    // paramMap.put(TRANS_ID, new String[] {
+    // serviceRequest.getCachedBankFormData().getTransId() });
+    // paramMap.put(MERCHANT_ID, new String[] {
+    // serviceRequest.getCachedBankFormData().getMerchantId() });
+    // paramMap.put(PAYMENT_MODE, new String[] {
+    // serviceResponse.getFormDetail().getContent().get(PAYMENT_MODE) });
+    // }
+    //
+    // ModifiableHttpServletRequest modifiableHttpServletRequest = new
+    // ModifiableHttpServletRequest(
+    // request.getHttpServletRequest(), paramMap);
+    //
+    // request.setHttpServletRequest(modifiableHttpServletRequest);
+    // }
 
     public NativeDirectBankPageCacheData getCachedBankFormData(NativeDirectBankPageRequest request) {
         /*
