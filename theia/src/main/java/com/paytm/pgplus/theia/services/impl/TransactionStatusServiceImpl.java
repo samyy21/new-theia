@@ -77,7 +77,7 @@ import com.paytm.pgplus.theia.constants.TheiaConstant.ExtendedInfoKeys.PaymentSt
 import com.paytm.pgplus.theia.constants.TheiaConstant.ExtraConstants;
 import com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams;
 import com.paytm.pgplus.theia.constants.TheiaConstant.RetryConstants;
-import com.paytm.pgplus.theia.enums.UPIPollStatus;
+//import com.paytm.pgplus.theia.enums.UPIPollStatus;
 import com.paytm.pgplus.theia.exceptions.SessionExpiredException;
 import com.paytm.pgplus.theia.exceptions.TheiaControllerException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
@@ -138,8 +138,8 @@ import static com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams.ORDER
 import static com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams.TRANSACTION_ID;
 import static com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams.Native.*;
 import static com.paytm.pgplus.theia.constants.TheiaConstant.RequestTypes.*;
-import static com.paytm.pgplus.theia.enums.UPIPollStatus.POLL_AGAIN;
-import static com.paytm.pgplus.theia.enums.UPIPollStatus.STOP_POLLING;
+//import static com.paytm.pgplus.theia.enums.UPIPollStatus.POLL_AGAIN;
+//import static com.paytm.pgplus.theia.enums.UPIPollStatus.STOP_POLLING;
 
 @Component("transactionStatusServiceImpl")
 public class TransactionStatusServiceImpl {
@@ -1065,127 +1065,158 @@ public class TransactionStatusServiceImpl {
 
     }
 
-    public Map<String, String> getUpiCashierResponse(HttpServletRequest request) {
-
-        String merchantId = null;
-        String cashierRequestId = null;
-        String transId = null;
-        String paymentMode = null;
-        UpiTransactionStatusRequest upiTransactionStatusRequest = null;
-        try {
-            if (MediaType.APPLICATION_JSON_VALUE.equals(request.getHeader(HttpHeaders.CONTENT_TYPE))
-                    && !request.getRequestURI().contains(V1_TRANSACTION_STATUS_URL)) {
-                String requestData = IOUtils.toString(request.getInputStream(), Charsets.UTF_8.name());
-                if (StringUtils.isEmpty(requestData))
-                    throw new TheiaServiceException("Invalid request, expected json request data is missing");
-                upiTransactionStatusRequest = JsonMapper
-                        .mapJsonToObject(requestData, UpiTransactionStatusRequest.class);
-                if (null == upiTransactionStatusRequest || null == upiTransactionStatusRequest.getHead()
-                        || null == upiTransactionStatusRequest.getBody())
-                    throw new TheiaServiceException("Invalid request, expected json request data is missing");
-                else {
-                    merchantId = upiTransactionStatusRequest.getBody().getMid();
-                    cashierRequestId = upiTransactionStatusRequest.getBody().getCashierRequestId();
-                    transId = upiTransactionStatusRequest.getBody().getTransId();
-                    paymentMode = upiTransactionStatusRequest.getBody().getPaymentMode();
-                }
-            } else {
-                merchantId = request.getParameter(ExtraConstants.MERCHANT_ID);
-                cashierRequestId = request.getParameter(ExtraConstants.CASHIER_REQUEST_ID);
-                transId = request.getParameter(ExtraConstants.TRANS_ID);
-                paymentMode = request.getParameter(ExtraConstants.PAYMENT_MODE);
-            }
-            final EnvInfoRequestBean envInfo = EnvInfoUtil.fetchEnvInfo(request);
-            String paymentMid = null;
-            boolean fromAoaMerchant = aoaUtils.isAOAMerchant(merchantId);
-            LOGGER.info("Request received to fetch UPI TXN_STATUS, CashierRequestId : {},", cashierRequestId);
-
-            String alipayMerchantId = validateAndGetAlipayMerchantId(merchantId, cashierRequestId, transId, paymentMode);
-            paymentMid = nativeSessionUtil.getFieldValue(transId, "PaymentMid");
-            if (StringUtils.isNotBlank(paymentMid)) {
-                alipayMerchantId = paymentMid;
-            }
-            TransactionInfo transInfo = transactionCacheUtils.getTransInfoFromCache(transId);
-
-            LOGGER.info("Transaction info obtained from cache is : {}", transInfo);
-
-            CashierRequestBuilder cashierRequestBuilder = new CashierRequestBuilder(transId,
-                    RequestIdGenerator.generateRequestId(), CashierWorkflow.getCashierWorkFlowByValue(paymentMode,
-                            transInfo)).setRoute(Routes.PG2).setPaytmMerchantId(merchantId);
-            cashierRequestBuilder.setFromAoaMerchant(fromAoaMerchant);
-            setLooperRequest(cashierRequestId, transId, alipayMerchantId, transInfo, cashierRequestBuilder);
-            CashierRequest cashierRequest = cashierRequestBuilder.build();
-            if (BooleanUtils.isTrue(Boolean.valueOf(request.getParameter(IS_ASYNC_TXN_STATUS_FLOW)))
-                    || (null != upiTransactionStatusRequest && null != upiTransactionStatusRequest.getBody() && upiTransactionStatusRequest
-                            .getBody().isAsyncTxnStatusFlow())) {
-                cashierRequest.setAsyncTxnStatusFlow(true);
-            }
-            boolean shouldUpiPollingStop = false;
-
-            modifyCashierRequestForAddMoneyMid(merchantId, transInfo, cashierRequest);
-            GenericCoreResponseBean<DoPaymentResponse> cashierResponse = paymentServiceImpl.submit(cashierRequest);
-
-            if ((cashierResponse == null) || (cashierResponse.getResponse() == null)) {
-                throw new TheiaServiceException("Cashier Response is null");
-            }
-
-            Map<String, String> data = new HashMap<>();
-
-            if ((cashierResponse.getResponse().getPaymentStatus() != null)
-                    && PaymentStatus.FAIL.name().equalsIgnoreCase(
-                            cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue())
-                    && cashierResponse.getResponse().getPaymentStatus().isPaymentRetryPossible()) {
-
-                CashierTransactionStatus cashierTransactionStatus = cashierResponse.getResponse()
-                        .getTransactionStatus();
-
-                if ((transInfo != null)
-                        && TransactionType.ACQUIRING.equals(transInfo.getTransactionType())
-                        && (cashierTransactionStatus != null)
-                        && AcquirementStatusType.INIT.getStatusType().equalsIgnoreCase(
-                                cashierTransactionStatus.getStatusDetailType())) {
-
-                    String mid = cashierTransactionStatus.getExtendInfo().get(RetryConstants.PAYTM_MID);
-                    if (cashierTransactionStatus.getExtendInfo().get(RetryConstants.ACTUAL_MID) != null) {
-                        mid = cashierTransactionStatus.getExtendInfo().get(RetryConstants.ACTUAL_MID);
-                    }
-                    String orderId = cashierTransactionStatus.getMerchantTransId();
-                    if (transInfo.getRequestType() != null
-                            && (NATIVE.equalsIgnoreCase(transInfo.getRequestType()) || UNI_PAY
-                                    .equalsIgnoreCase(transInfo.getRequestType()))) {
-                        LOGGER.info("Request received to fetch UPI TXN_STATUS FOR REQUEST TYPE NATIVE");
-                        if (retryServiceHelper.checkNativePaymentRetry(mid, orderId)) {
-                            EXT_LOGGER.customInfo("Retry possible for failed upi transaction");
-                            setRetryConfigData(cashierResponse, data, mid, orderId);
-                        }
-
-                    } else if (retryServiceHelper.checkPaymentRetry(mid, orderId, cashierResponse, transId, false,
-                            envInfo)) {
-                        setRetryConfigData(cashierResponse, data, mid, orderId);
-                    }
-                }
-                shouldUpiPollingStop = true;
-            } else {
-                if (PaymentStatus.SUCCESS.name().equalsIgnoreCase(
-                        cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue())
-                        || PaymentStatus.FAIL.name().equalsIgnoreCase(
-                                cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue())) {
-                    shouldUpiPollingStop = true;
-                }
-            }
-            if (StringUtils.isNotBlank(request.getParameter(TXN_TOKEN))) {
-                data.put(TXN_TOKEN, request.getParameter(TXN_TOKEN));
-            } else if (null != upiTransactionStatusRequest && null != upiTransactionStatusRequest.getBody()
-                    && StringUtils.isNotBlank(upiTransactionStatusRequest.getBody().getTxnToken())) {
-                data.put(TXN_TOKEN, upiTransactionStatusRequest.getBody().getTxnToken());
-            }
-            setUPIPollStatus(shouldUpiPollingStop ? STOP_POLLING : POLL_AGAIN, data);
-            return data;
-        } catch (Exception e) {
-            throw new TheiaServiceException(e);
-        }
-
-    }
+    // public Map<String, String> getUpiCashierResponse(HttpServletRequest
+    // request) {
+    //
+    // String merchantId = null;
+    // String cashierRequestId = null;
+    // String transId = null;
+    // String paymentMode = null;
+    // UpiTransactionStatusRequest upiTransactionStatusRequest = null;
+    // try {
+    // if
+    // (MediaType.APPLICATION_JSON_VALUE.equals(request.getHeader(HttpHeaders.CONTENT_TYPE))
+    // && !request.getRequestURI().contains(V1_TRANSACTION_STATUS_URL)) {
+    // String requestData = IOUtils.toString(request.getInputStream(),
+    // Charsets.UTF_8.name());
+    // if (StringUtils.isEmpty(requestData))
+    // throw new
+    // TheiaServiceException("Invalid request, expected json request data is missing");
+    // upiTransactionStatusRequest = JsonMapper
+    // .mapJsonToObject(requestData, UpiTransactionStatusRequest.class);
+    // if (null == upiTransactionStatusRequest || null ==
+    // upiTransactionStatusRequest.getHead()
+    // || null == upiTransactionStatusRequest.getBody())
+    // throw new
+    // TheiaServiceException("Invalid request, expected json request data is missing");
+    // else {
+    // merchantId = upiTransactionStatusRequest.getBody().getMid();
+    // cashierRequestId =
+    // upiTransactionStatusRequest.getBody().getCashierRequestId();
+    // transId = upiTransactionStatusRequest.getBody().getTransId();
+    // paymentMode = upiTransactionStatusRequest.getBody().getPaymentMode();
+    // }
+    // } else {
+    // merchantId = request.getParameter(ExtraConstants.MERCHANT_ID);
+    // cashierRequestId =
+    // request.getParameter(ExtraConstants.CASHIER_REQUEST_ID);
+    // transId = request.getParameter(ExtraConstants.TRANS_ID);
+    // paymentMode = request.getParameter(ExtraConstants.PAYMENT_MODE);
+    // }
+    // final EnvInfoRequestBean envInfo = EnvInfoUtil.fetchEnvInfo(request);
+    // String paymentMid = null;
+    // boolean fromAoaMerchant = aoaUtils.isAOAMerchant(merchantId);
+    // LOGGER.info("Request received to fetch UPI TXN_STATUS, CashierRequestId : {},",
+    // cashierRequestId);
+    //
+    // String alipayMerchantId = validateAndGetAlipayMerchantId(merchantId,
+    // cashierRequestId, transId, paymentMode);
+    // paymentMid = nativeSessionUtil.getFieldValue(transId, "PaymentMid");
+    // if (StringUtils.isNotBlank(paymentMid)) {
+    // alipayMerchantId = paymentMid;
+    // }
+    // TransactionInfo transInfo =
+    // transactionCacheUtils.getTransInfoFromCache(transId);
+    //
+    // LOGGER.info("Transaction info obtained from cache is : {}", transInfo);
+    //
+    // CashierRequestBuilder cashierRequestBuilder = new
+    // CashierRequestBuilder(transId,
+    // RequestIdGenerator.generateRequestId(),
+    // CashierWorkflow.getCashierWorkFlowByValue(paymentMode,
+    // transInfo)).setRoute(Routes.PG2).setPaytmMerchantId(merchantId);
+    // cashierRequestBuilder.setFromAoaMerchant(fromAoaMerchant);
+    // setLooperRequest(cashierRequestId, transId, alipayMerchantId, transInfo,
+    // cashierRequestBuilder);
+    // CashierRequest cashierRequest = cashierRequestBuilder.build();
+    // if
+    // (BooleanUtils.isTrue(Boolean.valueOf(request.getParameter(IS_ASYNC_TXN_STATUS_FLOW)))
+    // || (null != upiTransactionStatusRequest && null !=
+    // upiTransactionStatusRequest.getBody() && upiTransactionStatusRequest
+    // .getBody().isAsyncTxnStatusFlow())) {
+    // cashierRequest.setAsyncTxnStatusFlow(true);
+    // }
+    // boolean shouldUpiPollingStop = false;
+    //
+    // modifyCashierRequestForAddMoneyMid(merchantId, transInfo,
+    // cashierRequest);
+    // GenericCoreResponseBean<DoPaymentResponse> cashierResponse =
+    // paymentServiceImpl.submit(cashierRequest);
+    //
+    // if ((cashierResponse == null) || (cashierResponse.getResponse() == null))
+    // {
+    // throw new TheiaServiceException("Cashier Response is null");
+    // }
+    //
+    // Map<String, String> data = new HashMap<>();
+    //
+    // if ((cashierResponse.getResponse().getPaymentStatus() != null)
+    // && PaymentStatus.FAIL.name().equalsIgnoreCase(
+    // cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue())
+    // &&
+    // cashierResponse.getResponse().getPaymentStatus().isPaymentRetryPossible())
+    // {
+    //
+    // CashierTransactionStatus cashierTransactionStatus =
+    // cashierResponse.getResponse()
+    // .getTransactionStatus();
+    //
+    // if ((transInfo != null)
+    // && TransactionType.ACQUIRING.equals(transInfo.getTransactionType())
+    // && (cashierTransactionStatus != null)
+    // && AcquirementStatusType.INIT.getStatusType().equalsIgnoreCase(
+    // cashierTransactionStatus.getStatusDetailType())) {
+    //
+    // String mid =
+    // cashierTransactionStatus.getExtendInfo().get(RetryConstants.PAYTM_MID);
+    // if
+    // (cashierTransactionStatus.getExtendInfo().get(RetryConstants.ACTUAL_MID)
+    // != null) {
+    // mid =
+    // cashierTransactionStatus.getExtendInfo().get(RetryConstants.ACTUAL_MID);
+    // }
+    // String orderId = cashierTransactionStatus.getMerchantTransId();
+    // if (transInfo.getRequestType() != null
+    // && (NATIVE.equalsIgnoreCase(transInfo.getRequestType()) || UNI_PAY
+    // .equalsIgnoreCase(transInfo.getRequestType()))) {
+    // LOGGER.info("Request received to fetch UPI TXN_STATUS FOR REQUEST TYPE NATIVE");
+    // if (retryServiceHelper.checkNativePaymentRetry(mid, orderId)) {
+    // EXT_LOGGER.customInfo("Retry possible for failed upi transaction");
+    // setRetryConfigData(cashierResponse, data, mid, orderId);
+    // }
+    //
+    // } else if (retryServiceHelper.checkPaymentRetry(mid, orderId,
+    // cashierResponse, transId, false,
+    // envInfo)) {
+    // setRetryConfigData(cashierResponse, data, mid, orderId);
+    // }
+    // }
+    // shouldUpiPollingStop = true;
+    // } else {
+    // if (PaymentStatus.SUCCESS.name().equalsIgnoreCase(
+    // cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue())
+    // || PaymentStatus.FAIL.name().equalsIgnoreCase(
+    // cashierResponse.getResponse().getPaymentStatus().getPaymentStatusValue()))
+    // {
+    // shouldUpiPollingStop = true;
+    // }
+    // }
+    // if (StringUtils.isNotBlank(request.getParameter(TXN_TOKEN))) {
+    // data.put(TXN_TOKEN, request.getParameter(TXN_TOKEN));
+    // } else if (null != upiTransactionStatusRequest && null !=
+    // upiTransactionStatusRequest.getBody()
+    // &&
+    // StringUtils.isNotBlank(upiTransactionStatusRequest.getBody().getTxnToken()))
+    // {
+    // data.put(TXN_TOKEN, upiTransactionStatusRequest.getBody().getTxnToken());
+    // }
+    // setUPIPollStatus(shouldUpiPollingStop ? STOP_POLLING : POLL_AGAIN, data);
+    // return data;
+    // } catch (Exception e) {
+    // throw new TheiaServiceException(e);
+    // }
+    //
+    // }
 
     private boolean isRetryPossibleForOrder(CashierFundOrderStatus cashierFundOrderStatus,
             CashierTransactionStatus cashierTransactionStatus, TransactionInfo transInfo) {
@@ -1476,9 +1507,10 @@ public class TransactionStatusServiceImpl {
         }
     }
 
-    private void setUPIPollStatus(UPIPollStatus status, Map<String, String> map) {
-        map.put("POLL_STATUS", status.getMessage());
-    }
+    // private void setUPIPollStatus(UPIPollStatus status, Map<String, String>
+    // map) {
+    // map.put("POLL_STATUS", status.getMessage());
+    // }
 
     public String fetchResponsePageForAbandonTransaction(HttpServletRequest request,
             com.paytm.pgplus.theia.sessiondata.TransactionInfo txnData, MerchantInfo merchantInfo,
@@ -1892,13 +1924,14 @@ public class TransactionStatusServiceImpl {
         return false;
     }
 
-    public UPIPollStatus getUpiPollStatus(Map<String, String> data) {
-        if (data == null
-                || (null != data.get("POLL_STATUS") && UPIPollStatus.POLL_AGAIN.getMessage().equalsIgnoreCase(
-                        data.get("POLL_STATUS")))) {
-            return POLL_AGAIN;
-        }
-        return STOP_POLLING;
-    }
+    // public UPIPollStatus getUpiPollStatus(Map<String, String> data) {
+    // if (data == null
+    // || (null != data.get("POLL_STATUS") &&
+    // UPIPollStatus.POLL_AGAIN.getMessage().equalsIgnoreCase(
+    // data.get("POLL_STATUS")))) {
+    // return POLL_AGAIN;
+    // }
+    // return STOP_POLLING;
+    // }
 
 }
