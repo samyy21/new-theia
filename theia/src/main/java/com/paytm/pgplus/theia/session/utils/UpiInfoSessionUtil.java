@@ -181,67 +181,77 @@ public class UpiInfoSessionUtil {
         generateAndSetRequiredMerchantInfoInSession(requestData);
     }
 
-    public UPIPollResponse generateUPIPollResponse(WorkFlowRequestBean workFlowRequestBean,
-            WorkFlowResponseBean workFlowResponseBean, PaymentRequestBean requestData, boolean processed,
-            String paymentStatusVal, ResponseConstants responseConstant) {
-
-        ResultInfo resultInfo = new ResultInfo();
-        UPIPollResponseBody upiPollResponseBody = new UPIPollResponseBody();
-        UPIContent content = new UPIContent();
-        upiPollResponseBody.setResultInfo(resultInfo);
-        UPIPollResponse upiPollResponse = new UPIPollResponse(upiPollResponseBody);
-        String webFormContext = workFlowResponseBean.getQueryPaymentStatus().getWebFormContext();
-        if (processed && !PaymentStatus.FAIL.toString().equals(paymentStatusVal)
-                && StringUtils.isNotBlank(webFormContext)) {
-            content.setUpiAccepted(true);
-            resultInfo.setResultCode(ResultCode.SUCCESS.getCode());
-            resultInfo.setResultMsg(ResultCode.SUCCESS.getResultMsg());
-            resultInfo.setResultStatus(ResultCode.SUCCESS.getResultStatus());
-        } else {
-            content.setUpiAccepted(false);
-            if (responseConstant != null && StringUtils.isNotBlank(responseConstant.getMessage())) {
-                resultInfo.setResultCode(responseConstant.getCode());
-                resultInfo.setResultMsg(responseConstant.getMessage());
-                resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
-            } else if (workFlowResponseBean.getQueryPaymentStatus() != null
-                    && StringUtils.isNotEmpty(workFlowResponseBean.getQueryPaymentStatus().getPaytmResponseCode())) {
-                resultInfo.setResultMsg(workFlowResponseBean.getQueryPaymentStatus().getErrorMessage());
-                resultInfo.setResultCode(workFlowResponseBean.getQueryPaymentStatus().getPaytmResponseCode());
-                resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
-
-            } else {
-                resultInfo.setResultMsg(PaytmValidationExceptionType.INVALID_BANK_FORM.getValidationFailedMsg());
-                resultInfo.setResultCode(PaytmValidationExceptionType.INVALID_BANK_FORM.getValidationFailedCode());
-                resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
-            }
-        }
-        // Setting Appname for upi polling page
-        upiHandleUtil.setUPIHandle(workFlowRequestBean, content);
-
-        content.setOrderId(requestData.getOrderId());
-        content.setMid(requestData.getMid());
-        content.setTxnId(workFlowResponseBean.getTransID());
-        content.setCashierRequestId(workFlowResponseBean.getCashierRequestId());
-        content.setVpaID(workFlowRequestBean.getVirtualPaymentAddress());
-        content.setSelfPush(UpiInfoSessionUtil.isPaytmVpa(workFlowRequestBean,
-                workFlowRequestBean.getVirtualPaymentAddress()));
-        content.setTimeInterval(ConfigurationUtil.getProperty(TheiaConstant.UpiConfiguration.STATUS_QUERY_INTERVAL));
-        content.setTimeOut(getStatusTimeout(workFlowRequestBean.getPaymentTimeoutInMinsForUpi()));
-        content.setPaymentMode(PaymentTypeIdEnum.UPI.value);
-        content.setTxnAmount(UpiInfoSessionUtil.getTransactionAmount(workFlowResponseBean, requestData,
-                workFlowRequestBean));
-        content.setMerchantVPA(UpiInfoSessionUtil.getMerchantVPA(workFlowResponseBean));
-        content.setMerchantVpaTxnInfo(getMerchantVpaTxnInfo(workFlowResponseBean));
-
-        upiPollResponseBody.setContent(content);
-        content.setUpiStatusUrl(getBaseUrl() + "/upi/transactionStatus?MID=" + requestData.getMid() + "&ORDER_ID="
-                + requestData.getOrderId());
-        upiPollResponseBody.setContent(content);
-        upiPollResponseBody.setCallbackUrl(getBaseUrl() + "/transactionStatus?MID=" + requestData.getMid()
-                + "&ORDER_ID=" + requestData.getOrderId());
-
-        return upiPollResponse;
-    }
+    // public UPIPollResponse generateUPIPollResponse(WorkFlowRequestBean
+    // workFlowRequestBean,
+    // WorkFlowResponseBean workFlowResponseBean, PaymentRequestBean
+    // requestData, boolean processed,
+    // String paymentStatusVal, ResponseConstants responseConstant) {
+    //
+    // ResultInfo resultInfo = new ResultInfo();
+    // UPIPollResponseBody upiPollResponseBody = new UPIPollResponseBody();
+    // UPIContent content = new UPIContent();
+    // upiPollResponseBody.setResultInfo(resultInfo);
+    // UPIPollResponse upiPollResponse = new
+    // UPIPollResponse(upiPollResponseBody);
+    // String webFormContext =
+    // workFlowResponseBean.getQueryPaymentStatus().getWebFormContext();
+    // if (processed && !PaymentStatus.FAIL.toString().equals(paymentStatusVal)
+    // && StringUtils.isNotBlank(webFormContext)) {
+    // content.setUpiAccepted(true);
+    // resultInfo.setResultCode(ResultCode.SUCCESS.getCode());
+    // resultInfo.setResultMsg(ResultCode.SUCCESS.getResultMsg());
+    // resultInfo.setResultStatus(ResultCode.SUCCESS.getResultStatus());
+    // } else {
+    // content.setUpiAccepted(false);
+    // if (responseConstant != null &&
+    // StringUtils.isNotBlank(responseConstant.getMessage())) {
+    // resultInfo.setResultCode(responseConstant.getCode());
+    // resultInfo.setResultMsg(responseConstant.getMessage());
+    // resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
+    // } else if (workFlowResponseBean.getQueryPaymentStatus() != null
+    // &&
+    // StringUtils.isNotEmpty(workFlowResponseBean.getQueryPaymentStatus().getPaytmResponseCode()))
+    // {
+    // resultInfo.setResultMsg(workFlowResponseBean.getQueryPaymentStatus().getErrorMessage());
+    // resultInfo.setResultCode(workFlowResponseBean.getQueryPaymentStatus().getPaytmResponseCode());
+    // resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
+    //
+    // } else {
+    // resultInfo.setResultMsg(PaytmValidationExceptionType.INVALID_BANK_FORM.getValidationFailedMsg());
+    // resultInfo.setResultCode(PaytmValidationExceptionType.INVALID_BANK_FORM.getValidationFailedCode());
+    // resultInfo.setResultStatus(ResultCode.FAILED.getResultStatus());
+    // }
+    // }
+    // // Setting Appname for upi polling page
+    // upiHandleUtil.setUPIHandle(workFlowRequestBean, content);
+    //
+    // content.setOrderId(requestData.getOrderId());
+    // content.setMid(requestData.getMid());
+    // content.setTxnId(workFlowResponseBean.getTransID());
+    // content.setCashierRequestId(workFlowResponseBean.getCashierRequestId());
+    // content.setVpaID(workFlowRequestBean.getVirtualPaymentAddress());
+    // content.setSelfPush(UpiInfoSessionUtil.isPaytmVpa(workFlowRequestBean,
+    // workFlowRequestBean.getVirtualPaymentAddress()));
+    // content.setTimeInterval(ConfigurationUtil.getProperty(TheiaConstant.UpiConfiguration.STATUS_QUERY_INTERVAL));
+    // content.setTimeOut(getStatusTimeout(workFlowRequestBean.getPaymentTimeoutInMinsForUpi()));
+    // content.setPaymentMode(PaymentTypeIdEnum.UPI.value);
+    // content.setTxnAmount(UpiInfoSessionUtil.getTransactionAmount(workFlowResponseBean,
+    // requestData,
+    // workFlowRequestBean));
+    // content.setMerchantVPA(UpiInfoSessionUtil.getMerchantVPA(workFlowResponseBean));
+    // content.setMerchantVpaTxnInfo(getMerchantVpaTxnInfo(workFlowResponseBean));
+    //
+    // upiPollResponseBody.setContent(content);
+    // content.setUpiStatusUrl(getBaseUrl() + "/upi/transactionStatus?MID=" +
+    // requestData.getMid() + "&ORDER_ID="
+    // + requestData.getOrderId());
+    // upiPollResponseBody.setContent(content);
+    // upiPollResponseBody.setCallbackUrl(getBaseUrl() +
+    // "/transactionStatus?MID=" + requestData.getMid()
+    // + "&ORDER_ID=" + requestData.getOrderId());
+    //
+    // return upiPollResponse;
+    // }
 
     public UPIPushResponse generateUPIPushResponse(BaseResponse response, WorkFlowRequestBean workFlowRequestBean,
             WorkFlowResponseBean workFlowResponseBean, PaymentRequestBean requestData, boolean processed,

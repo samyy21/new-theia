@@ -1,12 +1,3 @@
-/theia/api/v1/upiPollPage
-Insufficient Balance.
-Invalid OTP, already used OTP entered
-Card has a fair success rate
-Paytm Balance
-This payment option is not allowed to pay with Paytm Wallet.
-True
-False
-
 /theia/api/v1/directBankRequest
 API is invalid (or not active)
 risk rejected

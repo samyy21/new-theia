@@ -22,7 +22,7 @@ import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.nativ.exception.NativeFlowException;
 import com.paytm.pgplus.theia.nativ.model.common.NativeInitiateRequest;
 import com.paytm.pgplus.theia.nativ.model.directpage.NativeDirectBankPageCacheData;
-import com.paytm.pgplus.theia.nativ.model.enhancenative.NativeUpiData;
+//import com.paytm.pgplus.theia.nativ.model.enhancenative.NativeUpiData;
 import com.paytm.pgplus.theia.nativ.model.payment.request.NativePaymentRequestBody;
 import com.paytm.pgplus.theia.nativ.model.payview.request.NativeCashierInfoRequest;
 import com.paytm.pgplus.theia.nativ.model.payview.response.NativeCashierInfoResponse;
@@ -560,13 +560,14 @@ public class NativeSessionUtil {
         return true;
     }
 
-    public NativeUpiData getNativeUpiData(String txnToken) {
-        return (NativeUpiData) fetchField(txnToken, "nativeUpiData");
-    }
-
-    public void setNativeUpiData(String txnToken, NativeUpiData nativeUpiData) {
-        saveField(txnToken, "nativeUpiData", nativeUpiData);
-    }
+    // public NativeUpiData getNativeUpiData(String txnToken) {
+    // return (NativeUpiData) fetchField(txnToken, "nativeUpiData");
+    // }
+    //
+    // public void setNativeUpiData(String txnToken, NativeUpiData
+    // nativeUpiData) {
+    // saveField(txnToken, "nativeUpiData", nativeUpiData);
+    // }
 
     public void setDirectBankPageRenderData(String txnToken, NativeDirectBankPageCacheData cacheData) {
         if (txnToken != null && cacheData != null && cacheData.getBankForm() != null
