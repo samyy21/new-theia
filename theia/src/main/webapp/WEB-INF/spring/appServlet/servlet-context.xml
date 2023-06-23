@@ -103,22 +103,22 @@
             <bean class="com.paytm.pgplus.theia.interceptors.SuperGwInterceptor"/>
         </mvc:interceptor>
 
-        <mvc:interceptor>
-            <mvc:mapping path="/processTransaction/**"/>
-            <mvc:mapping path="/customProcessTransaction/**"/>
-            <mvc:mapping path="/processRetry/**"/>
-            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFGeneratorInterceptor">
-            </bean>
-        </mvc:interceptor>
+<!--        <mvc:interceptor>-->
+<!--            <mvc:mapping path="/processTransaction/**"/>-->
+<!--            <mvc:mapping path="/customProcessTransaction/**"/>-->
+<!--            <mvc:mapping path="/processRetry/**"/>-->
+<!--            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFGeneratorInterceptor">-->
+<!--            </bean>-->
+<!--        </mvc:interceptor>-->
         <mvc:interceptor>
                         <mvc:mapping path="/processTransaction/**"/>
                         <bean class="com.paytm.pgplus.theia.interceptors.DisablePaymentModeForAddCardFlowInterceptor"></bean>
                   </mvc:interceptor>
-        <mvc:interceptor>
-            <mvc:mapping path="/DeleteCardDetails/**"/>
-            <mvc:mapping path="/payment/request/submit/**"/>
-            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFValidatorInterceptor"/>
-        </mvc:interceptor>
+<!--        <mvc:interceptor>-->
+<!--            <mvc:mapping path="/DeleteCardDetails/**"/>-->
+<!--            <mvc:mapping path="/payment/request/submit/**"/>-->
+<!--            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFValidatorInterceptor"/>-->
+<!--        </mvc:interceptor>-->
         <!-- json checksum/signature validation  -->
          <mvc:interceptor>
              <mvc:mapping path="/api/v1/initiateTransaction"/>

@@ -31,30 +31,30 @@
 
 
     <!-- Configuring interceptors based on URI -->
-    <mvc:interceptors>
-    	<!-- singnature validation interceptor -->
-        <mvc:interceptor>
-	        <mvc:mapping path="/v1/transactionStatus"/>
-	        <mvc:mapping path="/v1/directBankCardPayment"/>
-	        <bean class="com.paytm.pgplus.theia.interceptors.SignatureInterceptor" />
-	    </mvc:interceptor>
-        <mvc:interceptor>
-            <mvc:mapping path="/**"/>
-            <mvc:exclude-mapping path="/resources/**"/>
-            <mvc:exclude-mapping path="/healthcheck"/>
-            <bean class="com.paytm.pgplus.theia.interceptors.TheiaInterceptor"/>
-        </mvc:interceptor>
-        <mvc:interceptor>
-            <mvc:mapping path="/processTransaction/**"/>
-            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFGeneratorInterceptor">
-            </bean>
-        </mvc:interceptor>
-        <mvc:interceptor>
-            <mvc:mapping path="/DeleteCardDetails/**"/>
-            <mvc:mapping path="/payment/request/submit/**"/>
-            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFValidatorInterceptor"/>
-        </mvc:interceptor>
-    </mvc:interceptors>
+<!--    <mvc:interceptors>-->
+<!--    	&lt;!&ndash; singnature validation interceptor &ndash;&gt;-->
+<!--        <mvc:interceptor>-->
+<!--	        <mvc:mapping path="/v1/transactionStatus"/>-->
+<!--	        <mvc:mapping path="/v1/directBankCardPayment"/>-->
+<!--	        <bean class="com.paytm.pgplus.theia.interceptors.SignatureInterceptor" />-->
+<!--	    </mvc:interceptor>-->
+<!--        <mvc:interceptor>-->
+<!--            <mvc:mapping path="/**"/>-->
+<!--            <mvc:exclude-mapping path="/resources/**"/>-->
+<!--            <mvc:exclude-mapping path="/healthcheck"/>-->
+<!--            <bean class="com.paytm.pgplus.theia.interceptors.TheiaInterceptor"/>-->
+<!--        </mvc:interceptor>-->
+<!--        <mvc:interceptor>-->
+<!--            <mvc:mapping path="/processTransaction/**"/>-->
+<!--            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFGeneratorInterceptor">-->
+<!--            </bean>-->
+<!--        </mvc:interceptor>-->
+<!--        <mvc:interceptor>-->
+<!--            <mvc:mapping path="/DeleteCardDetails/**"/>-->
+<!--            <mvc:mapping path="/payment/request/submit/**"/>-->
+<!--            <bean class="com.paytm.pgplus.theia.csrf.interceptor.CSRFValidatorInterceptor"/>-->
+<!--        </mvc:interceptor>-->
+<!--    </mvc:interceptors>-->
 
     <!-- Configure Properties File -->
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" id="project-properties">
