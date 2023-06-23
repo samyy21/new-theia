@@ -21,7 +21,7 @@ import com.paytm.pgplus.pgpff4jclient.IPgpFf4jClient;
 import com.paytm.pgplus.request.InitiateTransactionRequestBody;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.helper.LinkBasedPaymentHelper;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.nativ.utils.NativeSessionUtil;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -74,18 +74,21 @@ public class LinkPaymentUtil {
 
     private static final String LINK_PARTIAL_PAYMENT_FEATURE = "linkPartialPayments";
 
-    public void setpageDetailsResponseForLinkBasedPayment(PageDetailsResponse pageDetailsResponse,
-            PaymentRequestBean requestData, String errorMessage, String errorCode) {
-        // errorMEssage and errorCode to be discussed
-
-        Map<String, String> content = null;
-
-        content = setRequestParamsForLinkPayments(requestData.getRequestType(), requestData.getMid(), errorMessage,
-                errorCode, requestData.getTxnAmount());
-        pageDetailsResponse.setHtmlPage(null);
-        pageDetailsResponse.setData(content);
-        LOGGER.info("Got pageDetailsResponse in Exception: {}", pageDetailsResponse.getData());
-    }
+    // public void setpageDetailsResponseForLinkBasedPayment(PageDetailsResponse
+    // pageDetailsResponse,
+    // PaymentRequestBean requestData, String errorMessage, String errorCode) {
+    // // errorMEssage and errorCode to be discussed
+    //
+    // Map<String, String> content = null;
+    //
+    // content = setRequestParamsForLinkPayments(requestData.getRequestType(),
+    // requestData.getMid(), errorMessage,
+    // errorCode, requestData.getTxnAmount());
+    // pageDetailsResponse.setHtmlPage(null);
+    // pageDetailsResponse.setData(content);
+    // LOGGER.info("Got pageDetailsResponse in Exception: {}",
+    // pageDetailsResponse.getData());
+    // }
 
     private Map<String, String> setRequestParamsForLinkPayments(String requestType, String mid, String errorMessage,
             String errorCode, String amount) {

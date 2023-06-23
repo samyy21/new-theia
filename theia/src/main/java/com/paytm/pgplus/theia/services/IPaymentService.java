@@ -12,7 +12,7 @@ import com.paytm.pgplus.common.enums.TxnState;
 import com.paytm.pgplus.theia.enums.ValidationResults;
 import com.paytm.pgplus.theia.exceptions.PaymentRequestValidationException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.transactionlogger.annotation.Loggable;
 
 /**
@@ -27,8 +27,9 @@ public interface IPaymentService extends Serializable {
      * @return
      * @throws TheiaServiceException
      */
-    PageDetailsResponse processPaymentRequest(PaymentRequestBean requestData, Model responseModel)
-            throws TheiaServiceException;
+    // PageDetailsResponse processPaymentRequest(PaymentRequestBean requestData,
+    // Model responseModel)
+    // throws TheiaServiceException;
 
     /**
      * @param requestData

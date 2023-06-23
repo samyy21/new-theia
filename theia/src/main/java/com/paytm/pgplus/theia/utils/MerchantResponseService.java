@@ -50,8 +50,8 @@ import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 //import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.models.ProcessedBmResponse;
-import com.paytm.pgplus.theia.nativ.model.common.EnhancedNativeErrorResponse;
-import com.paytm.pgplus.theia.nativ.model.common.EnhancedNativeErrorResponseBody;
+//import com.paytm.pgplus.theia.nativ.model.common.EnhancedNativeErrorResponse;
+//import com.paytm.pgplus.theia.nativ.model.common.EnhancedNativeErrorResponseBody;
 import com.paytm.pgplus.theia.nativ.model.common.NativeRetryInfo;
 import com.paytm.pgplus.theia.nativ.model.merchantuserinfo.MerchantInfoServiceRequest;
 import com.paytm.pgplus.theia.nativ.service.MerchantInfoService;
@@ -992,128 +992,158 @@ public class MerchantResponseService {
         }
     }
 
-    public EnhancedNativeErrorResponse getErrorResponseForDcc(InitiateTransactionRequestBody orderDetail,
-            HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo resultInfo, boolean isAES256Encrypted) {
-        TransactionResponse txnResp = createErrorResponseMerchantForDcc(orderDetail, request, retryInfo, resultInfo);
-        Map<String, String> paramMap;
-
-        if (isAES256Encrypted) {
-            paramMap = new HashMap<>();
-            String errorResponseHtml = theiaResponseGenerator.getFinalHtmlResponse(txnResp);
-            makeReponseToEncryptedMerchantEnhancedNative(errorResponseHtml, paramMap);
-        } else {
-            paramMap = new TreeMap<>();
-            makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-        }
-
-        EnhancedNativeErrorResponseBody body = new EnhancedNativeErrorResponseBody();
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = new com.paytm.pgplus.response.ResultInfo(
-                resultInfo.getResultStatus(), resultInfo.getResultCodeId(), resultInfo.getResultMsg(),
-                resultInfo.isRedirect());
-        body.setResultInfo(nativeResultInfo);
-        body.setRetryInfo(retryInfo);
-
-        if (request.getAttribute("NATIVE_ENHANCED_FLOW") != null
-                && BooleanUtils.toBoolean(request.getAttribute("NATIVE_ENHANCED_FLOW").toString())
-                && retryInfo.isRetryAllowed()) {
-            paramMap.put("paymentCallFromDccPage", "true");
-            paramMap.put(TXN_TOKEN, request.getAttribute(TXN_TOKEN).toString());
-            paramMap.put(MID, txnResp.getMid());
-            paramMap.put(ORDER_ID, txnResp.getOrderId());
-            // removing the default MID and ORDERID key as per
-            // v1/showPaymentPage api (case-sensitive)
-            paramMap.remove(TheiaConstant.RequestParams.MID);
-            paramMap.remove(ORDERID);
-        }
-
-        body.setContent(paramMap);
-        body.setCallbackUrl(txnResp.getCallbackUrl());
-
-        EnhancedNativeErrorResponse errorResponse = new EnhancedNativeErrorResponse();
-        errorResponse.setHead(new ResponseHeader());
-        errorResponse.setBody(body);
-        return errorResponse;
-    }
-
-    public EnhancedNativeErrorResponse getEnhancedNativeErrorResp(InitiateTransactionRequestBody orderDetail,
-            HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo resultInfo, boolean isRedirect,
-            boolean isAES256Encrypted, String customCallbackMsg) {
-
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = new com.paytm.pgplus.response.ResultInfo(
-                resultInfo.getResultStatus(), resultInfo.getResultCodeId(), resultInfo.getResultMsg(),
-                resultInfo.isRedirect());
-        nativeResultInfo.setRedirect(isRedirect);
-
-        TransactionResponse txnResp = createNativeRequestForMerchant(orderDetail, request, retryInfo, resultInfo, true,
-                customCallbackMsg);
-
-        // this makes paramMap with keys to UpperCase like being done in normal
-        // flow
-        Map<String, String> paramMap;
-
-        if (isAES256Encrypted) {
-            paramMap = new HashMap<>();
-            String errorResponseHtml = theiaResponseGenerator.getFinalHtmlResponse(txnResp);
-            makeReponseToEncryptedMerchantEnhancedNative(errorResponseHtml, paramMap);
-        } else {
-            paramMap = new TreeMap<>();
-            makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-        }
-
-        addRegionalFieldInPTCResponse(nativeResultInfo);
-        EnhancedNativeErrorResponseBody body = new EnhancedNativeErrorResponseBody();
-        body.setResultInfo(nativeResultInfo);
-        body.setRetryInfo(retryInfo);
-        body.setContent(paramMap);
-        body.setCallbackUrl(txnResp.getCallbackUrl());
-
-        EnhancedNativeErrorResponse errorResponse = new EnhancedNativeErrorResponse();
-        errorResponse.setHead(new ResponseHeader());
-        errorResponse.setBody(body);
-
-        return errorResponse;
-    }
-
-    public EnhancedNativeErrorResponse getEnhancedNativeErrorRespForMandateMerchant(String callBackUrl,
-            ProcessedBmResponse processedMandateResponse, ResultInfo resultInfo, PaymentRequestBean requestBean,
-            boolean isRedirect) {
-
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = new com.paytm.pgplus.response.ResultInfo(
-                resultInfo.getResultStatus(), resultInfo.getResultCodeId(), resultInfo.getResultMsg(),
-                resultInfo.isRedirect());
-        nativeResultInfo.setRedirect(isRedirect);
-
-        TransactionResponse merchantMandateResponse = prepareMerchantMandateResponse(processedMandateResponse,
-                resultInfo, requestBean);
-        String mid = null != requestBean ? requestBean.getMid() : null;
-
-        Map<String, String> paramMap = new TreeMap<>();
-        StringBuilder builder = new StringBuilder();
-
-        if (StringUtils.isEmpty(callBackUrl)) {
-            // for mandate merchants the response would be sent to the
-            // registered url for both the cases either paper or e mandate
-            callBackUrl = getCallbackUrl(MERCHANT_URL_INFO_WEBSITE_FOR_BM, mid);
-        }
-
-        if (StringUtils.isNotBlank(callBackUrl)) {
-            theiaResponseGenerator.fillTransactionResponseMap(merchantMandateResponse, builder, paramMap);
-        }
-
-        EnhancedNativeErrorResponseBody body = new EnhancedNativeErrorResponseBody();
-        body.setResultInfo(nativeResultInfo);
-        body.setRetryInfo(new NativeRetryInfo(false, "Retry Not Allowed for mandates"));
-        body.setContent(paramMap);
-        body.setCallbackUrl(callBackUrl);
-
-        EnhancedNativeErrorResponse errorResponse = new EnhancedNativeErrorResponse();
-        errorResponse.setHead(new ResponseHeader());
-        errorResponse.setBody(body);
-
-        LOGGER.info("Callback data send to merchant : {} at callBackUrl: {}", builder.toString(), callBackUrl);
-
-        return errorResponse;
-    }
+    // public EnhancedNativeErrorResponse
+    // getErrorResponseForDcc(InitiateTransactionRequestBody orderDetail,
+    // HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo
+    // resultInfo, boolean isAES256Encrypted) {
+    // TransactionResponse txnResp =
+    // createErrorResponseMerchantForDcc(orderDetail, request, retryInfo,
+    // resultInfo);
+    // Map<String, String> paramMap;
+    //
+    // if (isAES256Encrypted) {
+    // paramMap = new HashMap<>();
+    // String errorResponseHtml =
+    // theiaResponseGenerator.getFinalHtmlResponse(txnResp);
+    // makeReponseToEncryptedMerchantEnhancedNative(errorResponseHtml,
+    // paramMap);
+    // } else {
+    // paramMap = new TreeMap<>();
+    // makeReponseToMerchantEnhancedNative(txnResp, paramMap);
+    // }
+    //
+    // EnhancedNativeErrorResponseBody body = new
+    // EnhancedNativeErrorResponseBody();
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo = new
+    // com.paytm.pgplus.response.ResultInfo(
+    // resultInfo.getResultStatus(), resultInfo.getResultCodeId(),
+    // resultInfo.getResultMsg(),
+    // resultInfo.isRedirect());
+    // body.setResultInfo(nativeResultInfo);
+    // body.setRetryInfo(retryInfo);
+    //
+    // if (request.getAttribute("NATIVE_ENHANCED_FLOW") != null
+    // &&
+    // BooleanUtils.toBoolean(request.getAttribute("NATIVE_ENHANCED_FLOW").toString())
+    // && retryInfo.isRetryAllowed()) {
+    // paramMap.put("paymentCallFromDccPage", "true");
+    // paramMap.put(TXN_TOKEN, request.getAttribute(TXN_TOKEN).toString());
+    // paramMap.put(MID, txnResp.getMid());
+    // paramMap.put(ORDER_ID, txnResp.getOrderId());
+    // // removing the default MID and ORDERID key as per
+    // // v1/showPaymentPage api (case-sensitive)
+    // paramMap.remove(TheiaConstant.RequestParams.MID);
+    // paramMap.remove(ORDERID);
+    // }
+    //
+    // body.setContent(paramMap);
+    // body.setCallbackUrl(txnResp.getCallbackUrl());
+    //
+    // EnhancedNativeErrorResponse errorResponse = new
+    // EnhancedNativeErrorResponse();
+    // errorResponse.setHead(new ResponseHeader());
+    // errorResponse.setBody(body);
+    // return errorResponse;
+    // }
+    //
+    // public EnhancedNativeErrorResponse
+    // getEnhancedNativeErrorResp(InitiateTransactionRequestBody orderDetail,
+    // HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo
+    // resultInfo, boolean isRedirect,
+    // boolean isAES256Encrypted, String customCallbackMsg) {
+    //
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo = new
+    // com.paytm.pgplus.response.ResultInfo(
+    // resultInfo.getResultStatus(), resultInfo.getResultCodeId(),
+    // resultInfo.getResultMsg(),
+    // resultInfo.isRedirect());
+    // nativeResultInfo.setRedirect(isRedirect);
+    //
+    // TransactionResponse txnResp = createNativeRequestForMerchant(orderDetail,
+    // request, retryInfo, resultInfo, true,
+    // customCallbackMsg);
+    //
+    // // this makes paramMap with keys to UpperCase like being done in normal
+    // // flow
+    // Map<String, String> paramMap;
+    //
+    // if (isAES256Encrypted) {
+    // paramMap = new HashMap<>();
+    // String errorResponseHtml =
+    // theiaResponseGenerator.getFinalHtmlResponse(txnResp);
+    // makeReponseToEncryptedMerchantEnhancedNative(errorResponseHtml,
+    // paramMap);
+    // } else {
+    // paramMap = new TreeMap<>();
+    // makeReponseToMerchantEnhancedNative(txnResp, paramMap);
+    // }
+    //
+    // addRegionalFieldInPTCResponse(nativeResultInfo);
+    // EnhancedNativeErrorResponseBody body = new
+    // EnhancedNativeErrorResponseBody();
+    // body.setResultInfo(nativeResultInfo);
+    // body.setRetryInfo(retryInfo);
+    // body.setContent(paramMap);
+    // body.setCallbackUrl(txnResp.getCallbackUrl());
+    //
+    // EnhancedNativeErrorResponse errorResponse = new
+    // EnhancedNativeErrorResponse();
+    // errorResponse.setHead(new ResponseHeader());
+    // errorResponse.setBody(body);
+    //
+    // return errorResponse;
+    // }
+    //
+    // public EnhancedNativeErrorResponse
+    // getEnhancedNativeErrorRespForMandateMerchant(String callBackUrl,
+    // ProcessedBmResponse processedMandateResponse, ResultInfo resultInfo,
+    // PaymentRequestBean requestBean,
+    // boolean isRedirect) {
+    //
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo = new
+    // com.paytm.pgplus.response.ResultInfo(
+    // resultInfo.getResultStatus(), resultInfo.getResultCodeId(),
+    // resultInfo.getResultMsg(),
+    // resultInfo.isRedirect());
+    // nativeResultInfo.setRedirect(isRedirect);
+    //
+    // TransactionResponse merchantMandateResponse =
+    // prepareMerchantMandateResponse(processedMandateResponse,
+    // resultInfo, requestBean);
+    // String mid = null != requestBean ? requestBean.getMid() : null;
+    //
+    // Map<String, String> paramMap = new TreeMap<>();
+    // StringBuilder builder = new StringBuilder();
+    //
+    // if (StringUtils.isEmpty(callBackUrl)) {
+    // // for mandate merchants the response would be sent to the
+    // // registered url for both the cases either paper or e mandate
+    // callBackUrl = getCallbackUrl(MERCHANT_URL_INFO_WEBSITE_FOR_BM, mid);
+    // }
+    //
+    // if (StringUtils.isNotBlank(callBackUrl)) {
+    // theiaResponseGenerator.fillTransactionResponseMap(merchantMandateResponse,
+    // builder, paramMap);
+    // }
+    //
+    // EnhancedNativeErrorResponseBody body = new
+    // EnhancedNativeErrorResponseBody();
+    // body.setResultInfo(nativeResultInfo);
+    // body.setRetryInfo(new NativeRetryInfo(false,
+    // "Retry Not Allowed for mandates"));
+    // body.setContent(paramMap);
+    // body.setCallbackUrl(callBackUrl);
+    //
+    // EnhancedNativeErrorResponse errorResponse = new
+    // EnhancedNativeErrorResponse();
+    // errorResponse.setHead(new ResponseHeader());
+    // errorResponse.setBody(body);
+    //
+    // LOGGER.info("Callback data send to merchant : {} at callBackUrl: {}",
+    // builder.toString(), callBackUrl);
+    //
+    // return errorResponse;
+    // }
 
     protected String getPaymentMode(List<PayOptionInfo> payOptionInfos) {
         if ((payOptionInfos == null) || payOptionInfos.isEmpty()) {

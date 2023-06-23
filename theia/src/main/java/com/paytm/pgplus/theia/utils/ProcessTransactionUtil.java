@@ -89,7 +89,7 @@ import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 //import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.models.NativeJsonRequest;
 import com.paytm.pgplus.theia.models.UserAgentInfo;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.nativ.enums.AuthMode;
 import com.paytm.pgplus.theia.nativ.enums.PayModeType;
 import com.paytm.pgplus.theia.nativ.exception.NativeFlowException;
@@ -110,7 +110,7 @@ import com.paytm.pgplus.theia.offline.enums.PaymentFlow;
 import com.paytm.pgplus.theia.offline.enums.ResultCode;
 import com.paytm.pgplus.theia.offline.enums.TokenType;
 import com.paytm.pgplus.theia.offline.exceptions.BaseException;
-import com.paytm.pgplus.theia.offline.exceptions.DuplicatePaymentRequestException;
+//import com.paytm.pgplus.theia.offline.exceptions.DuplicatePaymentRequestException;
 import com.paytm.pgplus.theia.offline.exceptions.RequestValidationException;
 import com.paytm.pgplus.theia.offline.exceptions.SessionExpiredException;
 import com.paytm.pgplus.theia.redis.ITheiaTransactionalRedisUtil;
@@ -2699,37 +2699,41 @@ public class ProcessTransactionUtil {
         return false;
     }
 
-    public void checkIfDuplicatePaymentRequest(HttpServletRequest request) {
-        try {
-            String key = getDuplicateRequestKey(request);
-            Object haltDuplicatePayRequest = nativeSessionUtil.getKey(key);
-            String ttl = ConfigurationUtil.getProperty(TheiaConstant.ExtraConstants.DUPLICATE_PAYMENT_REDIS_TTL, "2");
-            if (haltDuplicatePayRequest == null) {
-                nativeSessionUtil.setKey(key, true, Long.valueOf(ttl));
-            } else {
-                LOGGER.error(BizConstant.FailureLogs.DUPLICATE_PAYMENT_REQUEST);
-                failureLogUtil.setFailureMsgForDwhPush(null, BizConstant.FailureLogs.DUPLICATE_PAYMENT_REQUEST, null,
-                        true);
-                throw DuplicatePaymentRequestException.getException();
-            }
-
-        } catch (BaseException e) {
-            failureLogUtil.setFailureMsgForDwhPush(e.getResultCode() != null ? e.getResultCode().getResultCodeId()
-                    : null, e.getMessage(), null, true);
-
-            throw e;
-        } catch (Exception e) {
-            LOGGER.warn("Exception occured while checking for duplicate payment request");
-        }
-    }
-
-    public void removeRedisKeyToAllowPayment(HttpServletRequest request) {
-        try {
-            nativeSessionUtil.deleteKey(getDuplicateRequestKey(request));
-        } catch (Exception e) {
-            LOGGER.error("Error in removing redis key");
-        }
-    }
+    // public void checkIfDuplicatePaymentRequest(HttpServletRequest request) {
+    // try {
+    // String key = getDuplicateRequestKey(request);
+    // Object haltDuplicatePayRequest = nativeSessionUtil.getKey(key);
+    // String ttl =
+    // ConfigurationUtil.getProperty(TheiaConstant.ExtraConstants.DUPLICATE_PAYMENT_REDIS_TTL,
+    // "2");
+    // if (haltDuplicatePayRequest == null) {
+    // nativeSessionUtil.setKey(key, true, Long.valueOf(ttl));
+    // } else {
+    // LOGGER.error(BizConstant.FailureLogs.DUPLICATE_PAYMENT_REQUEST);
+    // failureLogUtil.setFailureMsgForDwhPush(null,
+    // BizConstant.FailureLogs.DUPLICATE_PAYMENT_REQUEST, null,
+    // true);
+    // throw DuplicatePaymentRequestException.getException();
+    // }
+    //
+    // } catch (BaseException e) {
+    // failureLogUtil.setFailureMsgForDwhPush(e.getResultCode() != null ?
+    // e.getResultCode().getResultCodeId()
+    // : null, e.getMessage(), null, true);
+    //
+    // throw e;
+    // } catch (Exception e) {
+    // LOGGER.warn("Exception occured while checking for duplicate payment request");
+    // }
+    // }
+    //
+    // public void removeRedisKeyToAllowPayment(HttpServletRequest request) {
+    // try {
+    // nativeSessionUtil.deleteKey(getDuplicateRequestKey(request));
+    // } catch (Exception e) {
+    // LOGGER.error("Error in removing redis key");
+    // }
+    // }
 
     private String getDuplicateRequestKey(HttpServletRequest request) throws Exception {
         String mid = request.getParameter(TheiaConstant.RequestParams.Native.MID);
@@ -2927,27 +2931,31 @@ public class ProcessTransactionUtil {
                 && isNativeJsonRequest(paymentRequestBean.getRequest());
     }
 
-    public void setS2SResponseForNativeJsonRequest(PaymentRequestBean paymentRequestBean,
-            PageDetailsResponse processed, PageDetailsResponse pageDetailsResponse) {
-        if (StringUtils.isNotBlank(processed.getS2sResponse())) {
-            pageDetailsResponse.setS2sResponse(processed.getS2sResponse());
-            pageDetailsResponse.setSuccessfullyProcessed(true);
-        } else {
-            throw new NativeFlowException.ExceptionBuilder(ResultCode.FAILED).isHTMLResponse(false)
-                    .isRedirectEnhanceFlow(true).build();
-        }
-    }
+    // public void setS2SResponseForNativeJsonRequest(PaymentRequestBean
+    // paymentRequestBean,
+    // PageDetailsResponse processed, PageDetailsResponse pageDetailsResponse) {
+    // if (StringUtils.isNotBlank(processed.getS2sResponse())) {
+    // pageDetailsResponse.setS2sResponse(processed.getS2sResponse());
+    // pageDetailsResponse.setSuccessfullyProcessed(true);
+    // } else {
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.FAILED).isHTMLResponse(false)
+    // .isRedirectEnhanceFlow(true).build();
+    // }
+    // }
 
-    public void pushNativeEnhancedEvent(String mid, String orderId, String eventMsg, String paymentMode) {
-        LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
-        metaData.put("mid", mid);
-        metaData.put("orderId", orderId);
-        metaData.put("eventMsg", eventMsg);
-        if (StringUtils.isNotBlank(paymentMode)) {
-            metaData.put("paymentMode", paymentMode);
-        }
-        EventUtils.pushTheiaEvents(mid, orderId, EventNameEnum.NATIVE_ENHANCED, metaData);
-    }
+    // public void pushNativeEnhancedEvent(String mid, String orderId, String
+    // eventMsg, String paymentMode) {
+    // LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
+    // metaData.put("mid", mid);
+    // metaData.put("orderId", orderId);
+    // metaData.put("eventMsg", eventMsg);
+    // if (StringUtils.isNotBlank(paymentMode)) {
+    // metaData.put("paymentMode", paymentMode);
+    // }
+    // EventUtils.pushTheiaEvents(mid, orderId, EventNameEnum.NATIVE_ENHANCED,
+    // metaData);
+    // }
 
     public void pushNativePaymentEvent(String mid, String orderId, String eventMsg) {
         LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
@@ -2957,20 +2965,27 @@ public class ProcessTransactionUtil {
         EventUtils.pushTheiaEvents(mid, orderId, EventNameEnum.NATIVE, metaData);
     }
 
-    public void pushNativeJsonRequestEvent(Long time, NativeJsonRequest nativeJsonRequest) {
-
-        LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
-        if (nativeJsonRequest.getBody() != null) {
-            metaData.put("mid", StringUtils.defaultString(nativeJsonRequest.getBody().getMid()));
-            metaData.put("orderId", StringUtils.defaultString(nativeJsonRequest.getBody().getOrderId()));
-            metaData.put("paymentMode", StringUtils.defaultString(nativeJsonRequest.getBody().getPaymentMode()));
-            metaData.put("channelCode", StringUtils.defaultString(nativeJsonRequest.getBody().getChannelCode()));
-            metaData.put("totalTimeTaken", StringUtils.defaultString(time.toString()));
-            metaData.put("timeUnit", TimeUnit.MILLISECONDS.toString());
-            EventUtils.pushTheiaEvents(nativeJsonRequest.getBody().getMid(), nativeJsonRequest.getBody().getOrderId(),
-                    EventNameEnum.NATIVE_JSON_RESPONSE_TIME, metaData);
-        }
-    }
+    // public void pushNativeJsonRequestEvent(Long time, NativeJsonRequest
+    // nativeJsonRequest) {
+    //
+    // LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
+    // if (nativeJsonRequest.getBody() != null) {
+    // metaData.put("mid",
+    // StringUtils.defaultString(nativeJsonRequest.getBody().getMid()));
+    // metaData.put("orderId",
+    // StringUtils.defaultString(nativeJsonRequest.getBody().getOrderId()));
+    // metaData.put("paymentMode",
+    // StringUtils.defaultString(nativeJsonRequest.getBody().getPaymentMode()));
+    // metaData.put("channelCode",
+    // StringUtils.defaultString(nativeJsonRequest.getBody().getChannelCode()));
+    // metaData.put("totalTimeTaken",
+    // StringUtils.defaultString(time.toString()));
+    // metaData.put("timeUnit", TimeUnit.MILLISECONDS.toString());
+    // EventUtils.pushTheiaEvents(nativeJsonRequest.getBody().getMid(),
+    // nativeJsonRequest.getBody().getOrderId(),
+    // EventNameEnum.NATIVE_JSON_RESPONSE_TIME, metaData);
+    // }
+    // }
 
     public void pushFetchPaymentOptionsEvent(EventNameEnum eventNameEnum) {
         HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
@@ -2986,22 +3001,24 @@ public class ProcessTransactionUtil {
         EventUtils.pushTheiaEvents(mid, orderId, eventNameEnum, metaData);
     }
 
-    public void pushPaymentEvent(EventNameEnum eventNameEnum, String paymentMode) {
-        HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-                .getRequest();
-
-        String api = servletRequest.getRequestURI();
-        String requestId = MDC.get(TheiaConstant.RequestParams.REQUEST_ID);
-        String orderId = MDC.get(TheiaConstant.RequestParams.ORDER_ID);
-
-        LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
-        metaData.put("api", StringUtils.defaultString(api));
-        metaData.put("paymentMode", StringUtils.defaultString(paymentMode));
-        metaData.put(Native.REQUEST_ID, requestId);
-        metaData.put(Native.ORDER_ID, orderId);
-
-        EventUtils.pushTheiaEvents(eventNameEnum, metaData);
-    }
+    // public void pushPaymentEvent(EventNameEnum eventNameEnum, String
+    // paymentMode) {
+    // HttpServletRequest servletRequest = ((ServletRequestAttributes)
+    // RequestContextHolder.getRequestAttributes())
+    // .getRequest();
+    //
+    // String api = servletRequest.getRequestURI();
+    // String requestId = MDC.get(TheiaConstant.RequestParams.REQUEST_ID);
+    // String orderId = MDC.get(TheiaConstant.RequestParams.ORDER_ID);
+    //
+    // LinkedHashMap<String, String> metaData = new LinkedHashMap<>();
+    // metaData.put("api", StringUtils.defaultString(api));
+    // metaData.put("paymentMode", StringUtils.defaultString(paymentMode));
+    // metaData.put(Native.REQUEST_ID, requestId);
+    // metaData.put(Native.ORDER_ID, orderId);
+    //
+    // EventUtils.pushTheiaEvents(eventNameEnum, metaData);
+    // }
 
     public void pushV1PtcRequestEvent(HttpServletRequest request) {
 

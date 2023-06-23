@@ -102,7 +102,7 @@ import com.paytm.pgplus.theia.helper.LinkBasedPaymentHelper;
 //import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 //import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.nativ.model.common.EnhanceCashierPageCachePayload;
 import com.paytm.pgplus.theia.nativ.model.common.NativeInitiateRequest;
 import com.paytm.pgplus.theia.nativ.model.merchantuserinfo.MerchantInfoServiceRequest;
@@ -4579,15 +4579,19 @@ public class TheiaResponseGenerator {
         return null;
     }
 
-    public PageDetailsResponse getPageDetailsResponse(PaymentRequestBean requestData,
-            com.paytm.pgplus.pgproxycommon.enums.ResponseConstants responseConstant) {
-        String html = merchantResponseService.processMerchantFailResponse(requestData, responseConstant);
-
-        PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
-        pageDetailsResponse.setHtmlPage(html);
-        pageDetailsResponse.setSuccessfullyProcessed(false);
-        return pageDetailsResponse;
-    }
+    // public PageDetailsResponse getPageDetailsResponse(PaymentRequestBean
+    // requestData,
+    // com.paytm.pgplus.pgproxycommon.enums.ResponseConstants responseConstant)
+    // {
+    // String html =
+    // merchantResponseService.processMerchantFailResponse(requestData,
+    // responseConstant);
+    //
+    // PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
+    // pageDetailsResponse.setHtmlPage(html);
+    // pageDetailsResponse.setSuccessfullyProcessed(false);
+    // return pageDetailsResponse;
+    // }
 
     public String getErrorMsgForNativeEnhancedPaymentFailure(DoPaymentResponse doPaymentResponse) {
         CashierPaymentStatus paymentStatus = doPaymentResponse.getPaymentStatus();

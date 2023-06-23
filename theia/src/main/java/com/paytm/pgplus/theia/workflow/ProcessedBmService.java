@@ -3,7 +3,7 @@ package com.paytm.pgplus.theia.workflow;
 import com.google.gson.Gson;
 import com.paytm.pgplus.payloadvault.subscription.request.ProcessedMandateRequest;
 import com.paytm.pgplus.theia.models.ProcessedBmResponse;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.nativ.processor.MandateProcessor;
 import com.paytm.pgplus.theia.nativ.utils.NativeSessionUtil;
 import com.paytm.pgplus.theia.utils.ConfigurationUtil;
@@ -44,14 +44,16 @@ public class ProcessedBmService {
         return gson;
     }
 
-    public PageDetailsResponse process(ProcessedMandateRequest processedMandateRequest) {
-        ProcessedBmResponse processedMandateResponse = mandateProcessor.processMandate(processedMandateRequest);
-        setCallBackURLIfEmpty(processedMandateResponse);
-        PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
-        pageDetailsResponse.setS2sResponse(getGson().toJson(processedMandateResponse));
-        pageDetailsResponse.setRedirectionUrl(processedMandateResponse.getMerchantRedirectionUrl());
-        return pageDetailsResponse;
-    }
+    // public PageDetailsResponse process(ProcessedMandateRequest
+    // processedMandateRequest) {
+    // ProcessedBmResponse processedMandateResponse =
+    // mandateProcessor.processMandate(processedMandateRequest);
+    // setCallBackURLIfEmpty(processedMandateResponse);
+    // PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
+    // pageDetailsResponse.setS2sResponse(getGson().toJson(processedMandateResponse));
+    // pageDetailsResponse.setRedirectionUrl(processedMandateResponse.getMerchantRedirectionUrl());
+    // return pageDetailsResponse;
+    // }
 
     // public PageDetailsResponse processAoaMandate(AoaMandateCallbackRequest
     // aoaMandateCallbackRequest) {

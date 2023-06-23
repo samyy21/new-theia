@@ -12,7 +12,7 @@ import com.paytm.pgplus.biz.workflow.service.IWorkFlow;
 import com.paytm.pgplus.payloadvault.theia.request.PaymentRequestBean;
 import com.paytm.pgplus.pgproxycommon.enums.ResponseConstants;
 import com.paytm.pgplus.pgproxycommon.models.GenericCoreResponseBean;
-import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
+//import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.services.IBizService;
 import com.paytm.pgplus.theia.utils.MerchantResponseService;
 
@@ -38,16 +38,19 @@ public class ServiceHelper {
         return false;
     }
 
-    public PageDetailsResponse returnFailureResponseToMerchant(final PaymentRequestBean requestData,
-            ResponseConstants responseConstants) {
-
-        String htmlPage = merchantResponseService.processMerchantFailResponse(requestData, responseConstants);
-
-        PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
-        pageDetailsResponse.setSuccessfullyProcessed(false);
-        pageDetailsResponse.setHtmlPage(htmlPage);
-        return pageDetailsResponse;
-    }
+    // public PageDetailsResponse returnFailureResponseToMerchant(final
+    // PaymentRequestBean requestData,
+    // ResponseConstants responseConstants) {
+    //
+    // String htmlPage =
+    // merchantResponseService.processMerchantFailResponse(requestData,
+    // responseConstants);
+    //
+    // PageDetailsResponse pageDetailsResponse = new PageDetailsResponse();
+    // pageDetailsResponse.setSuccessfullyProcessed(false);
+    // pageDetailsResponse.setHtmlPage(htmlPage);
+    // return pageDetailsResponse;
+    // }
 
     public GenericCoreResponseBean<WorkFlowResponseBean> processBizWorkFlow(WorkFlowRequestBean workFlowRequestBean,
             IWorkFlow workFlow, IBizService bizService) {
