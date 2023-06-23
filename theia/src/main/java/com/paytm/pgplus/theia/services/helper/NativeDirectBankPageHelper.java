@@ -17,7 +17,7 @@ import com.paytm.pgplus.request.InitiateTransactionRequestBody;
 import com.paytm.pgplus.theia.cache.IMerchantPreferenceService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 //import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
-import com.paytm.pgplus.theia.models.NativeJsonResponse;
+//import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.nativ.exception.NativeFlowException;
 import com.paytm.pgplus.theia.nativ.model.common.TokenRequestHeader;
 import com.paytm.pgplus.theia.nativ.model.directpage.*;
@@ -131,35 +131,41 @@ public class NativeDirectBankPageHelper {
         return nativeDirectBankPageRequest;
     }
 
-    @SuppressWarnings("unchecked")
-    public NativeJsonResponse doSubmitRequest(NativeDirectBankPageRequest request) throws Exception {
-        LOGGER.info("Request received for SUBMIT from directPage");
-        NativeJsonResponse response = null;
-        IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse> requestProcessor = requestProcessorFactory
-                .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_SUBMIT);
-        response = requestProcessor.process(request);
-        return response;
-    }
-
-    @SuppressWarnings("unchecked")
-    public NativeJsonResponse doCancelRequest(NativeDirectBankPageRequest request) throws Exception {
-        LOGGER.info("Request received for CANCEL from directPage");
-        NativeJsonResponse response = null;
-        IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse> requestProcessor = requestProcessorFactory
-                .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_CANCEL);
-        response = requestProcessor.process(request);
-        return response;
-    }
-
-    @SuppressWarnings("unchecked")
-    public NativeJsonResponse doResentOtpRequest(NativeDirectBankPageRequest request) throws Exception {
-        LOGGER.info("Request received for RESEND-OTP from directPage");
-        NativeJsonResponse response = null;
-        IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse> requestProcessor = requestProcessorFactory
-                .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_RESEND_OTP);
-        response = requestProcessor.process(request);
-        return response;
-    }
+    // @SuppressWarnings("unchecked")
+    // public NativeJsonResponse doSubmitRequest(NativeDirectBankPageRequest
+    // request) throws Exception {
+    // LOGGER.info("Request received for SUBMIT from directPage");
+    // NativeJsonResponse response = null;
+    // IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse>
+    // requestProcessor = requestProcessorFactory
+    // .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_SUBMIT);
+    // response = requestProcessor.process(request);
+    // return response;
+    // }
+    //
+    // @SuppressWarnings("unchecked")
+    // public NativeJsonResponse doCancelRequest(NativeDirectBankPageRequest
+    // request) throws Exception {
+    // LOGGER.info("Request received for CANCEL from directPage");
+    // NativeJsonResponse response = null;
+    // IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse>
+    // requestProcessor = requestProcessorFactory
+    // .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_CANCEL);
+    // response = requestProcessor.process(request);
+    // return response;
+    // }
+    //
+    // @SuppressWarnings("unchecked")
+    // public NativeJsonResponse doResentOtpRequest(NativeDirectBankPageRequest
+    // request) throws Exception {
+    // LOGGER.info("Request received for RESEND-OTP from directPage");
+    // NativeJsonResponse response = null;
+    // IRequestProcessor<NativeDirectBankPageRequest, NativeJsonResponse>
+    // requestProcessor = requestProcessorFactory
+    // .getRequestProcessor(RequestProcessorFactory.RequestType.NATIVE_DIRECT_BANK_PAGE_RESEND_OTP);
+    // response = requestProcessor.process(request);
+    // return response;
+    // }
 
     public HttpRequestPayload<String> createResendOtpRequest(FormDetail formDetail, NativeDirectBankPageRequest request)
             throws Exception {

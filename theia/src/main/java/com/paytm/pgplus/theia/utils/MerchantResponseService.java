@@ -47,7 +47,7 @@ import com.paytm.pgplus.theia.cache.IMerchantPreferenceService;
 import com.paytm.pgplus.theia.cache.IMerchantUrlService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
-import com.paytm.pgplus.theia.models.NativeJsonResponse;
+//import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.models.ProcessedBmResponse;
 import com.paytm.pgplus.theia.nativ.model.common.EnhancedNativeErrorResponse;
@@ -1142,67 +1142,75 @@ public class MerchantResponseService {
         return sendResponseToMerchant(transactionResponse);
     }
 
-    public NativeJsonResponse getErrorNativeJsonResponse(InitiateTransactionRequestBody orderDetail,
-            HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo resultInfo, String customCallbackMessage) {
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
-
-        /*
-         * by default setting retry as false
-         */
-        nativeResultInfo.setRetry(false);
-        setRetry(nativeResultInfo, resultInfo);
-
-        if (retryInfo.isRetryAllowed()) {
-            nativeResultInfo.setRetry(true);
-        }
-
-        if (StringUtils.isNotBlank(resultInfo.getResultMsg())) {
-            nativeResultInfo.setResultMsg(resultInfo.getResultMsg());
-        }
-
-        /*
-         * put respMesg in resultInfo as retryMessage
-         */
-        if (StringUtils.isNotBlank(retryInfo.getRetryMessage())) {
-            nativeResultInfo.setResultMsg(retryInfo.getRetryMessage());
-        }
-
-        TransactionResponse txnResp = null;
-        Map<String, String> paramMap = null;
-
-        try {
-            txnResp = createNativeRequestForMerchant(orderDetail, request, retryInfo, resultInfo, false,
-                    customCallbackMessage);
-            paramMap = new TreeMap<>();
-            makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-        } catch (Exception e) {
-            LOGGER.error("Exception creating ErrorNativeJsonResponse {}", e);
-        }
-
-        addRegionalFieldInPTCResponse(nativeResultInfo);
-        body.setResultInfo(nativeResultInfo);
-        body.setTxnInfo(paramMap);
-        if (processTransactionUtil.isRequestOfType(V1_PTC)
-                && resultInfo.getResultCodeId().equals(ResponseConstants.NATIVE_RETRY_COUNT_BREACHED.getCode())
-                && merchantPreferenceService.isIdempotencyEnabledOnUi(orderDetail.getMid(), false)) {
-            if (body.getAdditionalInfo() == null)
-                body.setAdditionalInfo(new HashMap<>());
-            body.getAdditionalInfo().put(TheiaConstant.ExtraConstants.idempotentTransaction, String.valueOf(true));
-        }
-        setRetryInfo(body, txnResp);
-        if (txnResp != null) {
-            body.setCallBackUrl(txnResp.getCallbackUrl());
-            setDeepLinkErrorResponse(request, body, txnResp);
-        }
-
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-        return nativeJsonResponse;
-    }
+    // public NativeJsonResponse
+    // getErrorNativeJsonResponse(InitiateTransactionRequestBody orderDetail,
+    // HttpServletRequest request, NativeRetryInfo retryInfo, ResultInfo
+    // resultInfo, String customCallbackMessage) {
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    //
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo =
+    // NativePaymentUtil.resultInfo(ResultCode.FAILED);
+    //
+    // /*
+    // * by default setting retry as false
+    // */
+    // nativeResultInfo.setRetry(false);
+    // setRetry(nativeResultInfo, resultInfo);
+    //
+    // if (retryInfo.isRetryAllowed()) {
+    // nativeResultInfo.setRetry(true);
+    // }
+    //
+    // if (StringUtils.isNotBlank(resultInfo.getResultMsg())) {
+    // nativeResultInfo.setResultMsg(resultInfo.getResultMsg());
+    // }
+    //
+    // /*
+    // * put respMesg in resultInfo as retryMessage
+    // */
+    // if (StringUtils.isNotBlank(retryInfo.getRetryMessage())) {
+    // nativeResultInfo.setResultMsg(retryInfo.getRetryMessage());
+    // }
+    //
+    // TransactionResponse txnResp = null;
+    // Map<String, String> paramMap = null;
+    //
+    // try {
+    // txnResp = createNativeRequestForMerchant(orderDetail, request, retryInfo,
+    // resultInfo, false,
+    // customCallbackMessage);
+    // paramMap = new TreeMap<>();
+    // makeReponseToMerchantEnhancedNative(txnResp, paramMap);
+    // } catch (Exception e) {
+    // LOGGER.error("Exception creating ErrorNativeJsonResponse {}", e);
+    // }
+    //
+    // addRegionalFieldInPTCResponse(nativeResultInfo);
+    // body.setResultInfo(nativeResultInfo);
+    // body.setTxnInfo(paramMap);
+    // if (processTransactionUtil.isRequestOfType(V1_PTC)
+    // &&
+    // resultInfo.getResultCodeId().equals(ResponseConstants.NATIVE_RETRY_COUNT_BREACHED.getCode())
+    // &&
+    // merchantPreferenceService.isIdempotencyEnabledOnUi(orderDetail.getMid(),
+    // false)) {
+    // if (body.getAdditionalInfo() == null)
+    // body.setAdditionalInfo(new HashMap<>());
+    // body.getAdditionalInfo().put(TheiaConstant.ExtraConstants.idempotentTransaction,
+    // String.valueOf(true));
+    // }
+    // setRetryInfo(body, txnResp);
+    // if (txnResp != null) {
+    // body.setCallBackUrl(txnResp.getCallbackUrl());
+    // setDeepLinkErrorResponse(request, body, txnResp);
+    // }
+    //
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    // return nativeJsonResponse;
+    // }
 
     private void setDeepLinkErrorResponse(HttpServletRequest request, NativeJsonResponseBody body,
             TransactionResponse txnResp) {
@@ -1414,61 +1422,67 @@ public class MerchantResponseService {
         }
     }
 
-    public NativeJsonResponse getErrorNativeJsonResponseForBM(String callbackUrl,
-            ProcessedBmResponse processedMandateResponse, ResultInfo resultInfo, PaymentRequestBean requestBean) {
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = new com.paytm.pgplus.response.ResultInfo(
-                resultInfo.getResultStatus(), resultInfo.getResultCodeId(), resultInfo.getResultMsg());
-
-        /*
-         * by default setting retry as false
-         */
-        nativeResultInfo.setRetry(false);
-        setRetry(nativeResultInfo, resultInfo);
-        NativeRetryInfo retryInfo = new NativeRetryInfo(false, "Retry Not Allowed for Mandates");
-        if (retryInfo.isRetryAllowed()) {
-            nativeResultInfo.setRetry(true);
-        }
-
-        if (StringUtils.isNotBlank(resultInfo.getResultMsg())) {
-            nativeResultInfo.setResultMsg(resultInfo.getResultMsg());
-        }
-
-        /*
-         * put respMesg in resultInfo as retryMessage
-         */
-        if (StringUtils.isNotBlank(retryInfo.getRetryMessage())) {
-            nativeResultInfo.setResultMsg(retryInfo.getRetryMessage());
-        }
-
-        TransactionResponse txnResp = null;
-        Map<String, String> paramMap = null;
-        String mid = requestBean.getMid();
-        try {
-            txnResp = prepareMerchantMandateResponse(processedMandateResponse, resultInfo, requestBean);
-            paramMap = new TreeMap<>();
-            if (StringUtils.isEmpty(callbackUrl)) {
-                callbackUrl = getCallbackUrl(MERCHANT_URL_INFO_WEBSITE_FOR_BM, mid);
-            }
-            if (StringUtils.isNotBlank(callbackUrl)) {
-                makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-            }
-        } catch (Exception e) {
-            LOGGER.error("Exception creating ErrorNativeJsonResponse {}", e);
-        }
-
-        body.setResultInfo(nativeResultInfo);
-        body.setTxnInfo(paramMap);
-        setRetryInfo(body, txnResp);
-        body.setCallBackUrl(callbackUrl);
-
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-        return nativeJsonResponse;
-    }
+    // public NativeJsonResponse getErrorNativeJsonResponseForBM(String
+    // callbackUrl,
+    // ProcessedBmResponse processedMandateResponse, ResultInfo resultInfo,
+    // PaymentRequestBean requestBean) {
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    //
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo = new
+    // com.paytm.pgplus.response.ResultInfo(
+    // resultInfo.getResultStatus(), resultInfo.getResultCodeId(),
+    // resultInfo.getResultMsg());
+    //
+    // /*
+    // * by default setting retry as false
+    // */
+    // nativeResultInfo.setRetry(false);
+    // setRetry(nativeResultInfo, resultInfo);
+    // NativeRetryInfo retryInfo = new NativeRetryInfo(false,
+    // "Retry Not Allowed for Mandates");
+    // if (retryInfo.isRetryAllowed()) {
+    // nativeResultInfo.setRetry(true);
+    // }
+    //
+    // if (StringUtils.isNotBlank(resultInfo.getResultMsg())) {
+    // nativeResultInfo.setResultMsg(resultInfo.getResultMsg());
+    // }
+    //
+    // /*
+    // * put respMesg in resultInfo as retryMessage
+    // */
+    // if (StringUtils.isNotBlank(retryInfo.getRetryMessage())) {
+    // nativeResultInfo.setResultMsg(retryInfo.getRetryMessage());
+    // }
+    //
+    // TransactionResponse txnResp = null;
+    // Map<String, String> paramMap = null;
+    // String mid = requestBean.getMid();
+    // try {
+    // txnResp = prepareMerchantMandateResponse(processedMandateResponse,
+    // resultInfo, requestBean);
+    // paramMap = new TreeMap<>();
+    // if (StringUtils.isEmpty(callbackUrl)) {
+    // callbackUrl = getCallbackUrl(MERCHANT_URL_INFO_WEBSITE_FOR_BM, mid);
+    // }
+    // if (StringUtils.isNotBlank(callbackUrl)) {
+    // makeReponseToMerchantEnhancedNative(txnResp, paramMap);
+    // }
+    // } catch (Exception e) {
+    // LOGGER.error("Exception creating ErrorNativeJsonResponse {}", e);
+    // }
+    //
+    // body.setResultInfo(nativeResultInfo);
+    // body.setTxnInfo(paramMap);
+    // setRetryInfo(body, txnResp);
+    // body.setCallBackUrl(callbackUrl);
+    //
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    // return nativeJsonResponse;
+    // }
 
     public void addRegionalFieldInPTCResponse(Object response) {
         if (processTransactionUtil.isRequestOfType(PTR_URL)) {

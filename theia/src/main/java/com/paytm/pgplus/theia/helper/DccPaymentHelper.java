@@ -9,7 +9,7 @@ import com.paytm.pgplus.payloadvault.theia.request.PaymentRequestBean;
 import com.paytm.pgplus.response.ResponseHeader;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.enums.ELitePayViewDisabledReasonMsg;
-import com.paytm.pgplus.theia.models.NativeJsonResponse;
+//import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.nativ.model.enhancenative.BankRedirectionDetail;
 import com.paytm.pgplus.theia.nativ.model.payview.response.BankCard;
@@ -42,16 +42,17 @@ public class DccPaymentHelper {
     @Autowired
     private NativeSessionUtil nativeSessionUtil;
 
-    public NativeJsonResponse getNativePlusJsonDccBankform(WorkFlowRequestBean flowRequestBean) {
-        BankForm dccBankFrom = buildBankFormForDcc(flowRequestBean);
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-        nativeJsonResponse.setHead(new ResponseHeader());
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        body.setBankForm(dccBankFrom);
-        body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
-        nativeJsonResponse.setBody(body);
-        return nativeJsonResponse;
-    }
+    // public NativeJsonResponse
+    // getNativePlusJsonDccBankform(WorkFlowRequestBean flowRequestBean) {
+    // BankForm dccBankFrom = buildBankFormForDcc(flowRequestBean);
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // body.setBankForm(dccBankFrom);
+    // body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
+    // nativeJsonResponse.setBody(body);
+    // return nativeJsonResponse;
+    // }
 
     public BankRedirectionDetail getNativeEnhanceJsonDccBankform(WorkFlowRequestBean flowRequestBean) {
         BankRedirectionDetail bankRedirectionDetail = new BankRedirectionDetail();

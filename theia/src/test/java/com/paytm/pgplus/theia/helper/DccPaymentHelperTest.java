@@ -38,13 +38,13 @@ public class DccPaymentHelperTest {
         workFlowRequestBean.setOrderID("orderId");
     }
 
-    @Ignore
-    @Test
-    public void getNativePlusJsonDccBankform() {
-
-        assertNotNull(dccPaymentHelper.getNativePlusJsonDccBankform(workFlowRequestBean));
-
-    }
+    // @Ignore
+    // @Test
+    // public void getNativePlusJsonDccBankform() {
+    //
+    // assertNotNull(dccPaymentHelper.getNativePlusJsonDccBankform(workFlowRequestBean));
+    //
+    // }
 
     @Ignore
     @Test

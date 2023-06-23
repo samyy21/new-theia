@@ -100,7 +100,7 @@ import com.paytm.pgplus.theia.exceptions.TheiaControllerException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 import com.paytm.pgplus.theia.helper.LinkBasedPaymentHelper;
 //import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
-import com.paytm.pgplus.theia.models.NativeJsonResponse;
+//import com.paytm.pgplus.theia.models.NativeJsonResponse;
 import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.models.response.PageDetailsResponse;
 import com.paytm.pgplus.theia.nativ.model.common.EnhanceCashierPageCachePayload;
@@ -3004,60 +3004,67 @@ public class TheiaResponseGenerator {
         return baseurl;
     }
 
-    private NativeJsonResponse getNativeJsonBankForm(WorkFlowResponseBean workFlowResponseBean,
-            PaymentRequestBean requestData, WorkFlowRequestBean workFlowRequestBean) {
-
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-        nativeJsonResponse.setHead(new ResponseHeader());
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        nativeJsonResponse.setBody(body);
-
-        if (null != workFlowResponseBean.getQueryPaymentStatus()) {
-            String bankFormJson = workFlowResponseBean.getQueryPaymentStatus().getWebFormContext();
-            if (StringUtils.isNotBlank(bankFormJson)) {
-                /*
-                 * bankForm got from instaProxy is in JSON
-                 */
-
-                body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
-                BankForm bankForm = new Gson().fromJson(bankFormJson, BankForm.class);
-
-                if (workFlowRequestBean.isNativeDeepLinkReqd()) {
-                    LOGGER.info("Setting deepLink info in response body");
-                    DeepLink deepLink = bankForm != null ? bankForm.getDeepLink() : null;
-                    body.setDeepLinkInfo(getDeepLinkInfo(workFlowResponseBean, deepLink, requestData));
-                    if (StringUtils.isNotBlank(workFlowRequestBean.getPaytmMID())) {
-                        if (ff4JHelper.isFF4JFeatureForMidEnabled(THEIA__CHCECKOUT_POLLING_FOR_INTENT,
-                                workFlowRequestBean.getPaytmMID())) {
-                            setContentForUpiIntentPoll(body, workFlowRequestBean);
-                        }
-                    }
-                    String parser = deepLink.getUrl();
-                    String esn = StringUtils.substringBetween(parser, "&tr=", "&");
-                    nativeSessionUtil.setPaymentRequestBeanAgainstEsn(esn, requestData, 900);
-                } else {
-                    setContentForUPIPoll(workFlowRequestBean, bankForm, requestData);
-                    nativeDirectBankPageHelper.processForMerchantOwnedDirectBankPage(workFlowResponseBean,
-                            workFlowRequestBean, bankForm);
-                    body.setBankForm(bankForm);
-                }
-                /*
-                 * set gateway related info in additionalInfo field in response
-                 * along with bank-form
-                 */
-                if (aoaUtils.isAOAMerchant(requestData.getMid())) {
-                    setAdditionalInfoForAOA(workFlowResponseBean, body);
-                }
-                nativeJsonResponse.setBody(body);
-                return nativeJsonResponse;
-            }
-            LOGGER.error("Could not get NativeJson bankForm");
-            return generateMerchantNativeJsonResponsePaymentNotDone(workFlowResponseBean, requestData);
-        }
-        nativeJsonResponse.getBody().setResultInfo(NativePaymentUtil.resultInfo(ResultCode.FAILED));
-        return nativeJsonResponse;
-    }
+    // private NativeJsonResponse getNativeJsonBankForm(WorkFlowResponseBean
+    // workFlowResponseBean,
+    // PaymentRequestBean requestData, WorkFlowRequestBean workFlowRequestBean)
+    // {
+    //
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // nativeJsonResponse.setBody(body);
+    //
+    // if (null != workFlowResponseBean.getQueryPaymentStatus()) {
+    // String bankFormJson =
+    // workFlowResponseBean.getQueryPaymentStatus().getWebFormContext();
+    // if (StringUtils.isNotBlank(bankFormJson)) {
+    // /*
+    // * bankForm got from instaProxy is in JSON
+    // */
+    //
+    // body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
+    // BankForm bankForm = new Gson().fromJson(bankFormJson, BankForm.class);
+    //
+    // if (workFlowRequestBean.isNativeDeepLinkReqd()) {
+    // LOGGER.info("Setting deepLink info in response body");
+    // DeepLink deepLink = bankForm != null ? bankForm.getDeepLink() : null;
+    // body.setDeepLinkInfo(getDeepLinkInfo(workFlowResponseBean, deepLink,
+    // requestData));
+    // if (StringUtils.isNotBlank(workFlowRequestBean.getPaytmMID())) {
+    // if
+    // (ff4JHelper.isFF4JFeatureForMidEnabled(THEIA__CHCECKOUT_POLLING_FOR_INTENT,
+    // workFlowRequestBean.getPaytmMID())) {
+    // setContentForUpiIntentPoll(body, workFlowRequestBean);
+    // }
+    // }
+    // String parser = deepLink.getUrl();
+    // String esn = StringUtils.substringBetween(parser, "&tr=", "&");
+    // nativeSessionUtil.setPaymentRequestBeanAgainstEsn(esn, requestData, 900);
+    // } else {
+    // setContentForUPIPoll(workFlowRequestBean, bankForm, requestData);
+    // nativeDirectBankPageHelper.processForMerchantOwnedDirectBankPage(workFlowResponseBean,
+    // workFlowRequestBean, bankForm);
+    // body.setBankForm(bankForm);
+    // }
+    // /*
+    // * set gateway related info in additionalInfo field in response
+    // * along with bank-form
+    // */
+    // if (aoaUtils.isAOAMerchant(requestData.getMid())) {
+    // setAdditionalInfoForAOA(workFlowResponseBean, body);
+    // }
+    // nativeJsonResponse.setBody(body);
+    // return nativeJsonResponse;
+    // }
+    // LOGGER.error("Could not get NativeJson bankForm");
+    // return
+    // generateMerchantNativeJsonResponsePaymentNotDone(workFlowResponseBean,
+    // requestData);
+    // }
+    // nativeJsonResponse.getBody().setResultInfo(NativePaymentUtil.resultInfo(ResultCode.FAILED));
+    // return nativeJsonResponse;
+    // }
 
     private void setAdditionalInfoForAOA(WorkFlowResponseBean workFlowResponseBean, NativeJsonResponseBody responseBody) {
         if (responseBody != null) {
@@ -3201,109 +3208,125 @@ public class TheiaResponseGenerator {
         }
     }
 
-    private NativeJsonResponse getNativeJsonResponseForPaymentDone(WorkFlowResponseBean workFlowResponseBean,
-            PaymentRequestBean requestData) {
-        TransactionResponse txnResp = getTransactionResponseForSeamless(workFlowResponseBean, requestData);
-        /**
-         * Map<String, String> paramMap = new TreeMap<>();
-         * merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp,
-         * paramMap);
-         *
-         * processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
-         *
-         * ResultInfo resultInfo =
-         * NativePaymentUtil.resultInfo(ResultCode.SUCCESS); if
-         * (!StringUtils.equals(ExternalTransactionStatus.TXN_SUCCESS.name(),
-         * txnResp.getTransactionStatus())) { resultInfo =
-         * NativePaymentUtil.resultInfo(ResultCode.FAILED);
-         * resultInfo.setResultMsg(txnResp.getResponseMsg()); }
-         *
-         * if (requestData.isNativeRetryEnabled()) { resultInfo.setRetry(true);
-         * } else { resultInfo.setRetry(false); }
-         *
-         * NativeJsonResponseBody body = new NativeJsonResponseBody();
-         * body.setResultInfo(resultInfo); body.setTxnInfo(paramMap);
-         * body.setCallBackUrl(txnResp.getCallbackUrl());
-         *
-         * NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-         * nativeJsonResponse.setHead(new ResponseHeader());
-         * nativeJsonResponse.setBody(body);
-         **/
-        // return nativeJsonResponse;
-        NativeJsonResponse nativeJsonResponse = generateNativeJsonResponseFromTxnResponse(workFlowResponseBean,
-                txnResp, requestData);
-        String mid = "";
-        if (requestData.getMid() != null) {
-            mid = requestData.getMid();
-        }
-        if (StringUtils.isBlank(mid) && txnResp != null) {
-            mid = txnResp.getMid();
-        }
-        if (StringUtils.isNotBlank(mid)) {
-            boolean isAES256Encrypted = merchantPreferenceService.isAES256EncRequestEnabled(mid);
-            boolean encRequestEnabled = merchantPreferenceService.isEncRequestEnabled(mid);
-            Map<String, String> txnInfo = new TreeMap<>();
-            if ((isAES256Encrypted || encRequestEnabled)
-                    && ff4jUtils.isFeatureEnabledOnMid(mid, THEIA_ENCRYPTED_RESPONSE_TO_JSON, false)) {
-                LOGGER.info("Feature encryptedResponseToJson is enabled getNativeJsonResponseForPaymentDone()");
-                if (txnResp.getMid() != null) {
-                    merchantResponseService.encryptedResponseJson(mid, txnInfo, txnResp, isAES256Encrypted,
-                            encRequestEnabled);
-                    nativeJsonResponse.getBody().setTxnInfo(txnInfo);
-                }
-            }
-        } else {
-            LOGGER.error("mid is blank in both PaymentRequestBean and txnResp");
-        }
-        return nativeJsonResponse;
-    }
+    // private NativeJsonResponse
+    // getNativeJsonResponseForPaymentDone(WorkFlowResponseBean
+    // workFlowResponseBean,
+    // PaymentRequestBean requestData) {
+    // TransactionResponse txnResp =
+    // getTransactionResponseForSeamless(workFlowResponseBean, requestData);
+    // /**
+    // * Map<String, String> paramMap = new TreeMap<>();
+    // * merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp,
+    // * paramMap);
+    // *
+    // * processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
+    // *
+    // * ResultInfo resultInfo =
+    // * NativePaymentUtil.resultInfo(ResultCode.SUCCESS); if
+    // * (!StringUtils.equals(ExternalTransactionStatus.TXN_SUCCESS.name(),
+    // * txnResp.getTransactionStatus())) { resultInfo =
+    // * NativePaymentUtil.resultInfo(ResultCode.FAILED);
+    // * resultInfo.setResultMsg(txnResp.getResponseMsg()); }
+    // *
+    // * if (requestData.isNativeRetryEnabled()) { resultInfo.setRetry(true);
+    // * } else { resultInfo.setRetry(false); }
+    // *
+    // * NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // * body.setResultInfo(resultInfo); body.setTxnInfo(paramMap);
+    // * body.setCallBackUrl(txnResp.getCallbackUrl());
+    // *
+    // * NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    // * nativeJsonResponse.setHead(new ResponseHeader());
+    // * nativeJsonResponse.setBody(body);
+    // **/
+    // // return nativeJsonResponse;
+    // NativeJsonResponse nativeJsonResponse =
+    // generateNativeJsonResponseFromTxnResponse(workFlowResponseBean,
+    // txnResp, requestData);
+    // String mid = "";
+    // if (requestData.getMid() != null) {
+    // mid = requestData.getMid();
+    // }
+    // if (StringUtils.isBlank(mid) && txnResp != null) {
+    // mid = txnResp.getMid();
+    // }
+    // if (StringUtils.isNotBlank(mid)) {
+    // boolean isAES256Encrypted =
+    // merchantPreferenceService.isAES256EncRequestEnabled(mid);
+    // boolean encRequestEnabled =
+    // merchantPreferenceService.isEncRequestEnabled(mid);
+    // Map<String, String> txnInfo = new TreeMap<>();
+    // if ((isAES256Encrypted || encRequestEnabled)
+    // && ff4jUtils.isFeatureEnabledOnMid(mid, THEIA_ENCRYPTED_RESPONSE_TO_JSON,
+    // false)) {
+    // LOGGER.info("Feature encryptedResponseToJson is enabled getNativeJsonResponseForPaymentDone()");
+    // if (txnResp.getMid() != null) {
+    // merchantResponseService.encryptedResponseJson(mid, txnInfo, txnResp,
+    // isAES256Encrypted,
+    // encRequestEnabled);
+    // nativeJsonResponse.getBody().setTxnInfo(txnInfo);
+    // }
+    // }
+    // } else {
+    // LOGGER.error("mid is blank in both PaymentRequestBean and txnResp");
+    // }
+    // return nativeJsonResponse;
+    // }
 
-    private NativeJsonResponse generateNativeJsonResponseFromTxnResponse(WorkFlowResponseBean workFlowResponseBean,
-            TransactionResponse txnResp, PaymentRequestBean requestData) {
-        Map<String, String> paramMap = new TreeMap<>();
-        merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-
-        processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
-
-        ResultInfo resultInfo = NativePaymentUtil.resultInfo(ResultCode.SUCCESS);
-        UpiLiteResponseData upiLiteResponseData = populateUpiLiteRespionseData(workFlowResponseBean);
-        if (!StringUtils.equals(ExternalTransactionStatus.TXN_SUCCESS.name(), txnResp.getTransactionStatus())) {
-            if (ff4jUtils.isFeatureEnabled(COTP_REDIRECTION, false)) {
-                if (!StringUtils.equals(com.paytm.pgplus.theia.constants.TheiaConstant.ExtraConstants.SUCCESS,
-                        txnResp.getTransactionStatus())) {
-                    resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
-                    resultInfo.setResultMsg(txnResp.getResponseMsg());
-                }
-            } else {
-                resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
-                resultInfo.setResultMsg(txnResp.getResponseMsg());
-            }
-        }
-        addRegionalFieldInPTCResponse(resultInfo);
-        if (requestData.isNativeRetryEnabled()) {
-            resultInfo.setRetry(true);
-        } else {
-            resultInfo.setRetry(false);
-        }
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        body.setResultInfo(resultInfo);
-        body.setTxnInfo(paramMap);
-        body.setCallBackUrl(txnResp.getCallbackUrl());
-        body.setUpiLiteResponseData(upiLiteResponseData);
-        if (merchantPreferenceService.isIdempotencyEnabledOnUi(requestData.getMid(), false)) {
-            if (body.getAdditionalInfo() == null)
-                body.setAdditionalInfo(new HashMap<>());
-            body.getAdditionalInfo().put(TheiaConstant.ExtraConstants.idempotentTransaction,
-                    String.valueOf(workFlowResponseBean.isIdempotent()));
-        }
-
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-
-        return nativeJsonResponse;
-    }
+    // private NativeJsonResponse
+    // generateNativeJsonResponseFromTxnResponse(WorkFlowResponseBean
+    // workFlowResponseBean,
+    // TransactionResponse txnResp, PaymentRequestBean requestData) {
+    // Map<String, String> paramMap = new TreeMap<>();
+    // merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp,
+    // paramMap);
+    //
+    // processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
+    //
+    // ResultInfo resultInfo = NativePaymentUtil.resultInfo(ResultCode.SUCCESS);
+    // UpiLiteResponseData upiLiteResponseData =
+    // populateUpiLiteRespionseData(workFlowResponseBean);
+    // if (!StringUtils.equals(ExternalTransactionStatus.TXN_SUCCESS.name(),
+    // txnResp.getTransactionStatus())) {
+    // if (ff4jUtils.isFeatureEnabled(COTP_REDIRECTION, false)) {
+    // if
+    // (!StringUtils.equals(com.paytm.pgplus.theia.constants.TheiaConstant.ExtraConstants.SUCCESS,
+    // txnResp.getTransactionStatus())) {
+    // resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
+    // resultInfo.setResultMsg(txnResp.getResponseMsg());
+    // }
+    // } else {
+    // resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
+    // resultInfo.setResultMsg(txnResp.getResponseMsg());
+    // }
+    // }
+    // addRegionalFieldInPTCResponse(resultInfo);
+    // if (requestData.isNativeRetryEnabled()) {
+    // resultInfo.setRetry(true);
+    // } else {
+    // resultInfo.setRetry(false);
+    // }
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // body.setResultInfo(resultInfo);
+    // body.setTxnInfo(paramMap);
+    // body.setCallBackUrl(txnResp.getCallbackUrl());
+    // body.setUpiLiteResponseData(upiLiteResponseData);
+    // if
+    // (merchantPreferenceService.isIdempotencyEnabledOnUi(requestData.getMid(),
+    // false)) {
+    // if (body.getAdditionalInfo() == null)
+    // body.setAdditionalInfo(new HashMap<>());
+    // body.getAdditionalInfo().put(TheiaConstant.ExtraConstants.idempotentTransaction,
+    // String.valueOf(workFlowResponseBean.isIdempotent()));
+    // }
+    //
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    //
+    // return nativeJsonResponse;
+    // }
 
     private UpiLiteResponseData populateUpiLiteRespionseData(WorkFlowResponseBean workFlowResponseBean) {
         QueryPaymentStatus queryPaymentStatus = workFlowResponseBean.getQueryPaymentStatus();
@@ -3326,54 +3349,63 @@ public class TheiaResponseGenerator {
         return null;
     }
 
-    private NativeJsonResponse generateMerchantNativeJsonResponsePaymentNotDone(
-            WorkFlowResponseBean workFlowResponseBean, PaymentRequestBean requestData) {
-        TransactionResponse txnResp = getTxnResponsePaymentNotDone(workFlowResponseBean, requestData);
-        Map<String, String> paramMap = new TreeMap<>();
-        merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp, paramMap);
-        processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
-
-        ResultInfo resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
-        resultInfo.setResultMsg(txnResp.getResponseMsg());
-        BankResultInfo bankResultInfo = null;
-        boolean isMerchantOfflineType = false;
-        boolean isMerchantOnPaytm = merchantExtendInfoUtils.isMerchantOnPaytm(requestData.getMid());
-        String merchantSolutionType = getMerchantSolutionType(requestData.getMid());
-        if (StringUtils.isNotBlank(merchantSolutionType) && merchantSolutionType.equalsIgnoreCase(OFFLINE_MERCHANT)) {
-            isMerchantOfflineType = true;
-        }
-        if ((isMerchantOfflineType && !isMerchantOnPaytm && ff4jUtils.isFeatureEnabledOnMid(requestData.getMid(),
-                BizConstant.Ff4jFeature.POPULATE_BANK_RESULT_INFO_OFFLINE, false))
-                || ff4jUtils.isFeatureEnabledOnMid(requestData.getMid(),
-                        BizConstant.Ff4jFeature.POPULATE_BANK_RESULT_INFO_ONLINE, false)) {
-            if (workFlowResponseBean.getWorkFlowRequestBean() != null
-                    && PaymentTypeIdEnum.UPI.value.equals(workFlowResponseBean.getWorkFlowRequestBean()
-                            .getPaymentTypeId())) {
-                bankResultInfo = populateBankResultInfo(workFlowResponseBean);
-                LOGGER.info("BankResultInfo for UPI transaction : {}", bankResultInfo);
-            }
-        }
-
-        addRegionalFieldInPTCResponse(resultInfo);
-        if (requestData.isNativeRetryEnabled()) {
-            resultInfo.setRetry(true);
-        } else {
-            resultInfo.setRetry(false);
-        }
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        body.setResultInfo(resultInfo);
-        body.setTxnInfo(paramMap);
-        body.setCallBackUrl(txnResp.getCallbackUrl());
-        body.setBankResultInfo(bankResultInfo);
-        setDeepLinkInfoForFailure(body, workFlowResponseBean, null, requestData);
-        setRetryInfo(body, requestData, workFlowResponseBean, txnResp);
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-        LOGGER.info("NativeJsonResponce : {}", nativeJsonResponse.getBody());
-        return nativeJsonResponse;
-    }
+    // private NativeJsonResponse
+    // generateMerchantNativeJsonResponsePaymentNotDone(
+    // WorkFlowResponseBean workFlowResponseBean, PaymentRequestBean
+    // requestData) {
+    // TransactionResponse txnResp =
+    // getTxnResponsePaymentNotDone(workFlowResponseBean, requestData);
+    // Map<String, String> paramMap = new TreeMap<>();
+    // merchantResponseService.makeReponseToMerchantEnhancedNative(txnResp,
+    // paramMap);
+    // processTransactionUtil.pushNativeJsonResponseEvent(txnResp);
+    //
+    // ResultInfo resultInfo = NativePaymentUtil.resultInfo(ResultCode.FAILED);
+    // resultInfo.setResultMsg(txnResp.getResponseMsg());
+    // BankResultInfo bankResultInfo = null;
+    // boolean isMerchantOfflineType = false;
+    // boolean isMerchantOnPaytm =
+    // merchantExtendInfoUtils.isMerchantOnPaytm(requestData.getMid());
+    // String merchantSolutionType =
+    // getMerchantSolutionType(requestData.getMid());
+    // if (StringUtils.isNotBlank(merchantSolutionType) &&
+    // merchantSolutionType.equalsIgnoreCase(OFFLINE_MERCHANT)) {
+    // isMerchantOfflineType = true;
+    // }
+    // if ((isMerchantOfflineType && !isMerchantOnPaytm &&
+    // ff4jUtils.isFeatureEnabledOnMid(requestData.getMid(),
+    // BizConstant.Ff4jFeature.POPULATE_BANK_RESULT_INFO_OFFLINE, false))
+    // || ff4jUtils.isFeatureEnabledOnMid(requestData.getMid(),
+    // BizConstant.Ff4jFeature.POPULATE_BANK_RESULT_INFO_ONLINE, false)) {
+    // if (workFlowResponseBean.getWorkFlowRequestBean() != null
+    // &&
+    // PaymentTypeIdEnum.UPI.value.equals(workFlowResponseBean.getWorkFlowRequestBean()
+    // .getPaymentTypeId())) {
+    // bankResultInfo = populateBankResultInfo(workFlowResponseBean);
+    // LOGGER.info("BankResultInfo for UPI transaction : {}", bankResultInfo);
+    // }
+    // }
+    //
+    // addRegionalFieldInPTCResponse(resultInfo);
+    // if (requestData.isNativeRetryEnabled()) {
+    // resultInfo.setRetry(true);
+    // } else {
+    // resultInfo.setRetry(false);
+    // }
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // body.setResultInfo(resultInfo);
+    // body.setTxnInfo(paramMap);
+    // body.setCallBackUrl(txnResp.getCallbackUrl());
+    // body.setBankResultInfo(bankResultInfo);
+    // setDeepLinkInfoForFailure(body, workFlowResponseBean, null, requestData);
+    // setRetryInfo(body, requestData, workFlowResponseBean, txnResp);
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    // LOGGER.info("NativeJsonResponce : {}", nativeJsonResponse.getBody());
+    // return nativeJsonResponse;
+    // }
 
     private void setDeepLinkInfoForFailure(NativeJsonResponseBody body, WorkFlowResponseBean flowResponseBean,
             DeepLink deepLink, PaymentRequestBean requestData) {
@@ -4688,49 +4720,53 @@ public class TheiaResponseGenerator {
         return isFundSourceVerificationSuccess;
     }
 
-    public NativeJsonResponse returnNativeKycJsonPage(HttpServletRequest request, HttpServletResponse response,
-            Map<String, String[]> additionalParams) {
-
-        String kycKey = "Native_KYC_" + request.getAttribute(TheiaConstant.RequestParams.Native.TXN_TOKEN);
-        nativeSessionUtil.setKey(kycKey, additionalParams, 900);
-
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
-        BankForm bankForm = new BankForm();
-        bankForm.setPageType("redirect");
-
-        StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("?mid=").append(request.getParameter(MID));
-        queryBuilder.append("&orderId=").append(request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID));
-
-        FormDetail formDetail = new FormDetail();
-        formDetail.setActionUrl(ConfigurationUtil.getProperty("theia.base.url") + "/theia/api/v1/nativeKycPage"
-                + queryBuilder);
-        formDetail.setMethod("POST");
-        formDetail.setType("redirect");
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/x-www-form-urlencoded");
-
-        Map<String, String> content = new HashMap<>();
-        content.put(KYC_TXN_ID, (String) request.getAttribute(TheiaConstant.RequestParams.Native.TXN_TOKEN));
-        content.put(KYC_FLOW, "YES");
-        content.put(KYC_MID, request.getParameter(MID));
-        content.put(TheiaConstant.RequestParams.ORDER_ID,
-                request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID));
-
-        formDetail.setHeaders(headers);
-        formDetail.setContent(content);
-
-        bankForm.setRedirectForm(formDetail);
-        body.setBankForm(bankForm);
-
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-
-        return nativeJsonResponse;
-    }
+    // public NativeJsonResponse returnNativeKycJsonPage(HttpServletRequest
+    // request, HttpServletResponse response,
+    // Map<String, String[]> additionalParams) {
+    //
+    // String kycKey = "Native_KYC_" +
+    // request.getAttribute(TheiaConstant.RequestParams.Native.TXN_TOKEN);
+    // nativeSessionUtil.setKey(kycKey, additionalParams, 900);
+    //
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    //
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // body.setResultInfo(NativePaymentUtil.resultInfo(ResultCode.SUCCESS));
+    // BankForm bankForm = new BankForm();
+    // bankForm.setPageType("redirect");
+    //
+    // StringBuilder queryBuilder = new StringBuilder();
+    // queryBuilder.append("?mid=").append(request.getParameter(MID));
+    // queryBuilder.append("&orderId=").append(request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID));
+    //
+    // FormDetail formDetail = new FormDetail();
+    // formDetail.setActionUrl(ConfigurationUtil.getProperty("theia.base.url") +
+    // "/theia/api/v1/nativeKycPage"
+    // + queryBuilder);
+    // formDetail.setMethod("POST");
+    // formDetail.setType("redirect");
+    // Map<String, String> headers = new HashMap<>();
+    // headers.put("Content-Type", "application/x-www-form-urlencoded");
+    //
+    // Map<String, String> content = new HashMap<>();
+    // content.put(KYC_TXN_ID, (String)
+    // request.getAttribute(TheiaConstant.RequestParams.Native.TXN_TOKEN));
+    // content.put(KYC_FLOW, "YES");
+    // content.put(KYC_MID, request.getParameter(MID));
+    // content.put(TheiaConstant.RequestParams.ORDER_ID,
+    // request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID));
+    //
+    // formDetail.setHeaders(headers);
+    // formDetail.setContent(content);
+    //
+    // bankForm.setRedirectForm(formDetail);
+    // body.setBankForm(bankForm);
+    //
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    //
+    // return nativeJsonResponse;
+    // }
 
     private boolean isRequestOfflineFlow(QueryPaymentStatus transactionStatus) {
         if (transactionStatus != null && transactionStatus.getExtendInfo() != null
@@ -4804,66 +4840,77 @@ public class TheiaResponseGenerator {
         LOGGER.info("setting callback to showPaymentPage API");
     }
 
-    public void setDataRedirectToShowPaymentPageAPI(Map<String, String[]> additionalParams, HttpServletResponse response)
-            throws IOException {
-        if (additionalParams == null) {
-            return;
-        }
-        String mid = additionalParams.get(RequestParams.MID)[0];
-        String orderId = additionalParams.get(ORDER_ID)[0];
-        String txnToken = additionalParams
-                .get(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.TXN_TOKEN)[0];
+    // public void setDataRedirectToShowPaymentPageAPI(Map<String, String[]>
+    // additionalParams, HttpServletResponse response)
+    // throws IOException {
+    // if (additionalParams == null) {
+    // return;
+    // }
+    // String mid = additionalParams.get(RequestParams.MID)[0];
+    // String orderId = additionalParams.get(ORDER_ID)[0];
+    // String txnToken = additionalParams
+    // .get(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.TXN_TOKEN)[0];
+    //
+    // TransactionResponse transactionResponse = new TransactionResponse();
+    // createResponseToRedirectToCashierPage(transactionResponse, mid, orderId,
+    // txnToken);
+    // try {
+    // Map<String, String> responseMap = new HashMap<>();
+    // responseMap.put("RESPONSE_STATUS",
+    // transactionResponse.getTransactionStatus());
+    // responseMap.put("RESPONSE_MESSAGE",
+    // transactionResponse.getResponseMsg());
+    // statsDUtils.pushResponse("api/v1/processTransaction", responseMap);
+    // } catch (Exception exception) {
+    // LOGGER.error("Error in pushing response message " +
+    // "api/v1/processTransaction" + "to grafana", exception);
+    // }
+    //
+    // if
+    // (processTransactionUtil.isNativeJsonRequest(((ServletRequestAttributes)
+    // RequestContextHolder
+    // .getRequestAttributes()).getRequest())) {
+    // createResponseForNativeJsonRequestRedirectToShowPaymentPageAPI(transactionResponse,
+    // response);
+    // return;
+    // }
+    //
+    // String responsePage = getFinalHtmlResponse(transactionResponse);
+    //
+    // response.setStatus(HttpServletResponse.SC_OK);
+    // response.setContentType("text/html; charset=UTF-8");
+    // response.getWriter().print(responsePage);
+    // }
 
-        TransactionResponse transactionResponse = new TransactionResponse();
-        createResponseToRedirectToCashierPage(transactionResponse, mid, orderId, txnToken);
-        try {
-            Map<String, String> responseMap = new HashMap<>();
-            responseMap.put("RESPONSE_STATUS", transactionResponse.getTransactionStatus());
-            responseMap.put("RESPONSE_MESSAGE", transactionResponse.getResponseMsg());
-            statsDUtils.pushResponse("api/v1/processTransaction", responseMap);
-        } catch (Exception exception) {
-            LOGGER.error("Error in pushing response message " + "api/v1/processTransaction" + "to grafana", exception);
-        }
-
-        if (processTransactionUtil.isNativeJsonRequest(((ServletRequestAttributes) RequestContextHolder
-                .getRequestAttributes()).getRequest())) {
-            createResponseForNativeJsonRequestRedirectToShowPaymentPageAPI(transactionResponse, response);
-            return;
-        }
-
-        String responsePage = getFinalHtmlResponse(transactionResponse);
-
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType("text/html; charset=UTF-8");
-        response.getWriter().print(responsePage);
-    }
-
-    private void createResponseForNativeJsonRequestRedirectToShowPaymentPageAPI(
-            TransactionResponse transactionResponse, HttpServletResponse response) {
-        NativeJsonResponseBody body = new NativeJsonResponseBody();
-        NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
-
-        com.paytm.pgplus.response.ResultInfo nativeResultInfo = NativePaymentUtil.resultInfo(ResultCode.SUCCESS);
-        addRegionalFieldInPTCResponse(nativeResultInfo);
-        Map<String, String> paramMap = new TreeMap<>();
-
-        merchantResponseService.makeReponseToMerchantEnhancedNative(transactionResponse, paramMap);
-
-        body.setResultInfo(nativeResultInfo);
-        body.setTxnInfo(paramMap);
-        body.setCallBackUrl(transactionResponse.getCallbackUrl());
-
-        nativeJsonResponse.setHead(new ResponseHeader());
-        nativeJsonResponse.setBody(body);
-
-        try {
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(getJSONString(nativeJsonResponse));
-        } catch (IOException e) {
-            LOGGER.error("error in setting json response");
-        }
-    }
+    // private void
+    // createResponseForNativeJsonRequestRedirectToShowPaymentPageAPI(
+    // TransactionResponse transactionResponse, HttpServletResponse response) {
+    // NativeJsonResponseBody body = new NativeJsonResponseBody();
+    // NativeJsonResponse nativeJsonResponse = new NativeJsonResponse();
+    //
+    // com.paytm.pgplus.response.ResultInfo nativeResultInfo =
+    // NativePaymentUtil.resultInfo(ResultCode.SUCCESS);
+    // addRegionalFieldInPTCResponse(nativeResultInfo);
+    // Map<String, String> paramMap = new TreeMap<>();
+    //
+    // merchantResponseService.makeReponseToMerchantEnhancedNative(transactionResponse,
+    // paramMap);
+    //
+    // body.setResultInfo(nativeResultInfo);
+    // body.setTxnInfo(paramMap);
+    // body.setCallBackUrl(transactionResponse.getCallbackUrl());
+    //
+    // nativeJsonResponse.setHead(new ResponseHeader());
+    // nativeJsonResponse.setBody(body);
+    //
+    // try {
+    // response.setStatus(HttpServletResponse.SC_OK);
+    // response.setContentType("application/json;charset=UTF-8");
+    // response.getWriter().write(getJSONString(nativeJsonResponse));
+    // } catch (IOException e) {
+    // LOGGER.error("error in setting json response");
+    // }
+    // }
 
     private String getJSONString(Object obj) {
         String responseJson = "{}";
