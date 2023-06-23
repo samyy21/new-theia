@@ -7,17 +7,39 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b646bae9-4cbb-47ca-8bb8-61a64ed6a839" name="Changes" comment="second successful commit">
+    <list default="true" id="b646bae9-4cbb-47ca-8bb8-61a64ed6a839" name="Changes" comment="4 controller done">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/LocaleFieldAPIStrings.txt" beforeDir="false" afterPath="$PROJECT_DIR$/theia/LocaleFieldAPIStrings.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/UPIPollPageRendererController.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/UPIPollPageRendererController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/VersionCheckController.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/VersionCheckController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/enhancenative/NativeUpiData.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/enhancenative/NativeUpiData.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/enhancenative/UPIPollResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/enhancenative/UPIPollResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/utils/NativeSessionUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/utils/NativeSessionUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/session/utils/UpiInfoSessionUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/session/utils/UpiInfoSessionUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/utils/UPIPollPageUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/utils/UPIPollPageUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/controllers/UPIPollPageRendererControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/controllers/UPIPollPageRendererControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/UIEventCaptureController.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/UIEventCaptureController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/helper/UPIIntentControllerHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/controllers/helper/UPIIntentControllerHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkRequestBody.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkRequestBody.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkResponseHeader.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/FetchDeepLinkResponseHeader.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/CheckUPIAccountRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/CheckUPIAccountRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/FetchUpiOptionsAndAccountCheckRequestBody.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/FetchUpiOptionsAndAccountCheckRequestBody.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/FetchUpiOptionsRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/request/FetchUpiOptionsRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/CheckUPIAccountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/CheckUPIAccountResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/FetchUpiOptionsAndAccountCheckResponseBody.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/FetchUpiOptionsAndAccountCheckResponseBody.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/FetchUpiOptionsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/models/upiAccount/response/FetchUpiOptionsResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/fetchpspapps/FetchPspAppsRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/fetchpspapps/FetchPspAppsRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/fetchpspapps/FetchPspAppsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/model/fetchpspapps/FetchPspAppsResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/processor/impl/FetchPspAppsRequestProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/processor/impl/FetchPspAppsRequestProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/processor/impl/fetchUserPaymentOffersRequestProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/nativ/processor/impl/fetchUserPaymentOffersRequestProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/CheckUPIAccountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/CheckUPIAccountService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/FetchUpiOptionsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/FetchUpiOptionsService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/UpiIntentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/UpiIntentService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/CheckUPIAccountServiceHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/CheckUPIAccountServiceHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/FetchUpiOptionsServiceHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/FetchUpiOptionsServiceHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/UpiIntentServiceHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/helper/UpiIntentServiceHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/FetchUpiOptionsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/FetchUpiOptionsServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/UpiIntentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/UpiIntentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/checkUPIAccountServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/services/upiAccount/impl/checkUPIAccountServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/session/utils/UPIIntentUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/main/java/com/paytm/pgplus/theia/session/utils/UPIIntentUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/nativ/processor/impl/FetchPspAppsRequestProcessorTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/nativ/processor/impl/FetchPspAppsRequestProcessorTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/helper/CheckUPIAccountServiceHelperTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/helper/CheckUPIAccountServiceHelperTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/helper/FetchUpiOptionsServiceHelperTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/helper/FetchUpiOptionsServiceHelperTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/impl/FetchUpiOptionsServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/impl/FetchUpiOptionsServiceImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/impl/checkUPIAccountServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/theia/src/test/java/com/paytm/pgplus/theia/services/upiAccount/impl/checkUPIAccountServiceImplTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,26 +91,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "/Users/surajsrivastava/Desktop/paytm/theia",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Project",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.44367817",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "MavenSettings",
-    "spring.configuration.checksum": "3d82a04829c9791b314547c49bdee876",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/surajsrivastava/Desktop/paytm/theia&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.44367817&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;spring.configuration.checksum&quot;: &quot;3d82a04829c9791b314547c49bdee876&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -251,7 +273,8 @@
       <workItem from="1686723513977" duration="29658000" />
       <workItem from="1687430672600" duration="2065000" />
       <workItem from="1687435634131" duration="20291000" />
-      <workItem from="1687499290530" duration="2651000" />
+      <workItem from="1687499290530" duration="5276000" />
+      <workItem from="1687505298453" duration="571000" />
     </task>
     <task id="LOCAL-00001" summary="[PGP-41308] : Modifying snsConfig">
       <created>1668662934233</created>
@@ -295,7 +318,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687457509578</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="4 controller done">
+      <created>1687502234135</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1687502234135</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -318,7 +348,8 @@
     <MESSAGE value="[PGP-41308] : Modifying to RedisNotFoundStrings" />
     <MESSAGE value="[PGP-41308] : Modifying theiaStats" />
     <MESSAGE value="second successful commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="second successful commit" />
+    <MESSAGE value="4 controller done" />
+    <option name="LAST_COMMIT_MESSAGE" value="4 controller done" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
