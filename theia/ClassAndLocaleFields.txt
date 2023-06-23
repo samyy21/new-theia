@@ -67,10 +67,6 @@ com.paytm.pgplus.theia.nativ.model.payview.response.DigitalCreditAccountInfo
 mictLines,List
 displayMessage,String
 
-com.paytm.pgplus.theia.nativ.model.common.EnhancedCashierPayModeData
-channelName,String
-displayName,String
-
 com.paytm.pgplus.theia.nativ.model.bin.NativeBinDetailResponseBody
 errorMessage,String
 
