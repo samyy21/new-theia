@@ -14,7 +14,7 @@ import com.paytm.pgplus.facade.utils.JsonMapper;
 import com.paytm.pgplus.logging.ExtendedLogger;
 import com.paytm.pgplus.mappingserviceclient.service.IConfigurationService;
 import com.paytm.pgplus.theia.cache.IConfigurationDataService;
-import com.paytm.pgplus.theia.exceptions.DisasterException;
+//import com.paytm.pgplus.theia.exceptions.DisasterException;
 import com.paytm.pgplus.theia.exceptions.PaymentRequestValidationException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -113,31 +113,39 @@ public class ConfigurationDataServiceImpl implements IConfigurationDataService {
         return null;
     }
 
-    @Override
-    public Optional<List<PaytmDefaultValuesData>> getPaytmDefaultValues(List<String> fieldNameList) {
-        PaytmDefaultValuesList paytmDefaultValuesList;
-        List<PaytmDefaultValuesData> paytmDefaultValuesDataList = new ArrayList<>();
-        try {
-
-            paytmDefaultValuesList = configurationService.getPaytmDefaultValuesListV2(fieldNameList);
-            EXT_LOGGER.customInfo("Mapping response - PaytmDefaultValuesList :: {}", paytmDefaultValuesList);
-
-            if (paytmDefaultValuesList == null
-                    || CollectionUtils.isEmpty(paytmDefaultValuesList.getPaytmDefaultValuesList())) {
-                throw new DisasterException("Paytm Default Values Cannot Be Null");
-            }
-            paytmDefaultValuesList.getPaytmDefaultValuesList().forEach(
-                    paytmDefaultValues -> {
-                        PaytmDefaultValuesData paytmDefaultValuesData = new PaytmDefaultValuesData(paytmDefaultValues
-                                .getFieldName(), paytmDefaultValues.getFieldType(), paytmDefaultValues.getStatus());
-                        paytmDefaultValuesDataList.add(paytmDefaultValuesData);
-                    });
-            return Optional.of(paytmDefaultValuesDataList);
-        } catch (Exception errorCause) {
-            LOGGER.error("Error while fetching Paytm Default Values from mapping service");
-        }
-        return Optional.empty();
-    }
+    // @Override
+    // public Optional<List<PaytmDefaultValuesData>>
+    // getPaytmDefaultValues(List<String> fieldNameList) {
+    // PaytmDefaultValuesList paytmDefaultValuesList;
+    // List<PaytmDefaultValuesData> paytmDefaultValuesDataList = new
+    // ArrayList<>();
+    // try {
+    //
+    // paytmDefaultValuesList =
+    // configurationService.getPaytmDefaultValuesListV2(fieldNameList);
+    // EXT_LOGGER.customInfo("Mapping response - PaytmDefaultValuesList :: {}",
+    // paytmDefaultValuesList);
+    //
+    // if (paytmDefaultValuesList == null
+    // ||
+    // CollectionUtils.isEmpty(paytmDefaultValuesList.getPaytmDefaultValuesList()))
+    // {
+    // throw new DisasterException("Paytm Default Values Cannot Be Null");
+    // }
+    // paytmDefaultValuesList.getPaytmDefaultValuesList().forEach(
+    // paytmDefaultValues -> {
+    // PaytmDefaultValuesData paytmDefaultValuesData = new
+    // PaytmDefaultValuesData(paytmDefaultValues
+    // .getFieldName(), paytmDefaultValues.getFieldType(),
+    // paytmDefaultValues.getStatus());
+    // paytmDefaultValuesDataList.add(paytmDefaultValuesData);
+    // });
+    // return Optional.of(paytmDefaultValuesDataList);
+    // } catch (Exception errorCause) {
+    // LOGGER.error("Error while fetching Paytm Default Values from mapping service");
+    // }
+    // return Optional.empty();
+    // }
 
     @Override
     public EMIValidBinsData getEmiValidBins(String key) {

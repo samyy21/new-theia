@@ -84,7 +84,7 @@ import com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams.Native;
 import com.paytm.pgplus.theia.datamapper.helper.BizRequestResponseMapperHelper;
 import com.paytm.pgplus.theia.emiSubvention.helper.SubventionEmiServiceHelper;
 import com.paytm.pgplus.theia.enums.ELitePayViewDisabledReasonMsg;
-import com.paytm.pgplus.theia.exceptions.RiskRejectException;
+//import com.paytm.pgplus.theia.exceptions.RiskRejectException;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 //import com.paytm.pgplus.theia.models.ModifiableHttpServletRequest;
 import com.paytm.pgplus.theia.models.NativeJsonRequest;
@@ -349,1409 +349,1823 @@ public class ProcessTransactionUtil {
         return null;
     }
 
-    public Map<String, String[]> getAdditionalParamMap(final HttpServletRequest request,
-            final HttpServletResponse response) throws Exception {
-        Map<String, String[]> additionalParams = new HashMap<>();
-
-        boolean isEnhancedNativeFlow = isEnhancedNativeFlow(request);
-        boolean isNativeJsonRequest = isNativeJsonRequest(request);
-
-        if (isEnhancedNativeFlow) {
-            additionalParams.put(ENHANCED_CASHIER_PAYMENT_REQUEST, new String[] { Boolean.TRUE.toString() });
-        }
-
-        pushV1PtcRequestEvent(request);
-
-        boolean sendHTML = true;
-        /*
-         * check if request is NativeJsonRequest or enhancedNativeFlow,
-         * returnType should be json
-         */
-        if (isNativeJsonRequest || isEnhancedNativeFlow) {
-            sendHTML = false;
-        }
-
-        String orderId = request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID);
-
-        String txnToken = request.getParameter(Native.TXN_TOKEN);
-        if (StringUtils.isBlank(txnToken) && StringUtils.isNotBlank(request.getParameter(Native.GUEST_TOKEN))) {
-            txnToken = request.getParameter(Native.TOKEN);
-        }
-
-        String mid = request.getParameter(TheiaConstant.RequestParams.Native.MID);
-        additionalParams.put(TheiaConstant.RequestParams.Native.TXN_TOKEN, new String[] { txnToken });
-
-        additionalParams.put(DCC_SELECTED_BY_USER, new String[] { request.getParameter(DCC_SELECTED_BY_USER) });
-        additionalParams.put(PAYMENT_CALL_DCC, new String[] { request.getParameter(PAYMENT_CALL_DCC) });
-
-        request.setAttribute(Native.TXN_TOKEN, txnToken);
-        String oneClickInfo = request.getParameter(ONECLICKINFO);
-        if (oneClickInfo != null) {
-            additionalParams.put(Native.ONE_CLICK_INFO, new String[] { oneClickInfo });
-        }
-        String coftConsentInfo = request.getParameter(COFT_CONSENT);
-        if (coftConsentInfo != null) {
-            CoftConsent coftConsent = JsonMapper.mapJsonToObject(coftConsentInfo, CoftConsent.class);
-            if (coftConsent.getUserConsent() == null
-                    || (coftConsent.getUserConsent() != 1 && coftConsent.getUserConsent() != 0)) {
-                LOGGER.error("Invalid coftConsentInfo : {}", coftConsentInfo);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null, true);
-
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-            additionalParams.put(COFT_CONSENT, new String[] { coftConsentInfo });
-        }
-        String ecomTokenInfo = request.getParameter(ECOMTOKENINFO);
-        String cardTokenInfo = request.getParameter(CARDTOKENINFO);
-
-        if (StringUtils.isNotBlank(txnToken)) {
-            String isCollectAppInvoke = (String) nativeSessionUtil.getField(txnToken, COLLECT_API_INVOKE);
-            if (StringUtils.isNotBlank(isCollectAppInvoke) && StringUtils.equalsIgnoreCase(isCollectAppInvoke, "true")) {
-                String paymentMode = request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
-                paymentMode = StringUtils.isNotBlank(paymentMode) ? paymentMode : "";
-                if (isEnhancedNativeFlow) {
-                    pushNativePaymentEvent(mid, orderId,
-                            "M-WEB Payment by notification App Invoke flow using ".concat(paymentMode));
-                } else {
-                    pushNativePaymentEvent(mid, orderId,
-                            "APP Payment by notification App Invoke flow using ".concat(paymentMode));
-                }
-            }
-        }
-
-        NativeInitiateRequest nativeInitiateRequest = null;
-        try {
-            if (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))) {
-                nativeInitiateRequest = createNativeInitiateRequestForSsoFLow(request);
-                additionalParams.put(Native.RISK_EXTENDED_INFO,
-                        new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
-
-            } else {
-
-                nativeInitiateRequest = nativeSessionUtil.validate(txnToken);
-
-            }
-        } catch (SessionExpiredException see) {
-            if (isNativeJsonRequest || isEnhancedNativeFlow) {
-                failureLogUtil.setFailureMsgForDwhPush(ResultCode.SESSION_EXPIRED_EXCEPTION.getResultCodeId(),
-                        ResultCode.SESSION_EXPIRED_EXCEPTION.getResultMsg(), null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.SESSION_EXPIRED_EXCEPTION).isHTMLResponse(
-                        sendHTML).build();
-            } else {
-                failureLogUtil.setFailureMsgForDwhPush(null, see.getMessage(), null, true);
-                throw see;
-            }
-        }
-        if (StringUtils.isNotBlank(request.getParameter(Native.RISK_EXTENDED_INFO))) {
-
-            LOGGER.debug("DATA_ENRICHEMENT : Setting risk_extended_info in additionalParams : {} ",
-                    request.getParameter(Native.RISK_EXTENDED_INFO));
-            additionalParams.put(Native.RISK_EXTENDED_INFO,
-                    new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
-        }
-
-        InitiateTransactionRequestBody orderDetail = nativeInitiateRequest.getInitiateTxnReq().getBody();
-        addOrderDetails(orderDetail, additionalParams);
-
-        if (orderDetail != null && orderDetail.isAoaSubsOnPgMid()) {
-            additionalParams.put(AOA_SUBS_ON_PG_MID, new String[] { Boolean.TRUE.toString() });
-        }
-
-        if (orderDetail.isAutoRefund()) {
-            additionalParams.put(AUTO_REFUND, new String[] { Boolean.TRUE.toString() });
-            additionalParams.put(BLOCK_NON_CC_DC_PAYMODES, new String[] { Boolean.TRUE.toString() });
-        }
-
-        validateOneClickPayment(request, orderDetail);
-        addFlowTypeOnTxnToken(request, txnToken);
-
-        if (orderDetail != null && orderDetail.isOfflineFlow()) {
-            LOGGER.info("Offline flow for trans :{}", orderDetail.isOfflineFlow());
-            String extendInfo = request.getParameter(Native.OFFLINE_EXTEND_INFO);
-            if (extendInfo != null) {
-                orderDetail.setExtendInfo(getExtendInfo(request, extendInfo));
-                orderDetail.getExtendInfo().setComments(
-                        JsonMapper.getStringParamFromJson(extendInfo, TheiaConstant.ExtendedInfoKeys.ADDITIONAL_INFO));
-                nativeSessionUtil.setOrderDetail(txnToken, orderDetail);
-            } else {
-                LOGGER.info("extend info is null for offline mlv flow");
-            }
-        }
-
-        Map<String, Object> extraParamsMap = (Map<String, Object>) theiaTransactionalRedisUtil.get(mid + "#" + orderId);
-        if (extraParamsMap != null
-                && (extraParamsMap.get("headAccount") != null || extraParamsMap.get("remitterName") != null)
-                && !isAllowedWrapper(extraParamsMap, MANIPUR_WRAPPER)
-                && !isAllowedWrapper(extraParamsMap, ASSAM_WRAPPER)) {
-            additionalParams.put("challanIdNum", new String[] { workFlowHelper.generateCIN(BSR_CODE) });
-        }
-
-        // setting sdkType in extendInfo
-        populateSdkTypeInExtendInfo(request, orderDetail, txnToken);
-
-        if ((StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN)) || StringUtils.isNotBlank(request
-                .getParameter(GUEST_TOKEN))) && StringUtils.isBlank(orderDetail.getPaytmSsoToken())) {
-            // set sso token saved against guestToken in orderdetail
-            String token = StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN)) ? request
-                    .getParameter(ACCESS_TOKEN) : request.getParameter(GUEST_TOKEN);
-            String ssoToken = nativeSessionUtil.getSsoToken(token);
-            orderDetail.setPaytmSsoToken(ssoToken);
-
-            if (StringUtils.isBlank(ssoToken)
-                    && StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN))
-                    && EPayMethod.EMI.getMethod().equalsIgnoreCase(
-                            request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE))) {
-                CreateAccessTokenServiceRequest accessTokenData = accessTokenUtils.getAccessTokenDetail(token);
-                if (accessTokenData != null && accessTokenData.getUserInfo() != null
-                        && StringUtils.isNotBlank(accessTokenData.getUserInfo().getMobile())) {
-                    UserInfo userInfo = orderDetail.getUserInfo();
-                    if (userInfo == null) {
-                        userInfo = new UserInfo();
-                        orderDetail.setUserInfo(userInfo);
-                    }
-                    userInfo.setMobile(accessTokenData.getUserInfo().getMobile());
-                }
-            }
-            // update order detail in cache
-            nativeSessionUtil.setOrderDetail(txnToken, orderDetail);
-
-        }
-        additionalParams.put(Native.GUEST_TOKEN, new String[] { request.getParameter(Native.GUEST_TOKEN) });
-        additionalParams.put(Native.WORKFLOW, new String[] { request.getParameter(Native.WORKFLOW) });
-
-        request.setAttribute("orderDetail", orderDetail);
-        additionalParams.put(PEON_URL, new String[] { orderDetail.getPEON_URL() });
-        additionalParams.put(AGG_MID, new String[] { orderDetail.getAggMid() });
-
-        if (orderDetail.getEmiSubventionValidationResponse() != null) {
-            String paymentMode = request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
-            if (!EPayMethod.EMI.getMethod().equals(paymentMode)) {
-                LOGGER.error(BizConstant.FailureLogs.PAYMENT_MODE_IS_INVALID_FOR_EMI_SUBVENTION);
-                if (isNativeJsonRequest(request)) {
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.PAYMENT_MODE_IS_INVALID_FOR_EMI_SUBVENTION, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-                failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
-                        .getResultCodeId(), RequestValidationException.getException().getMessage(), null, true);
-                throw RequestValidationException.getException();
-            }
-            ValidateRequest subventionvalidateRequest = (ValidateRequest) orderDetail
-                    .getEmiSubventionValidationResponse().get(VALIDATE_EMI_REQUEST);
-            ValidateResponse subventionValidateResponse = (ValidateResponse) orderDetail
-                    .getEmiSubventionValidationResponse().get(VALIDATE_EMI_RESPONSE);
-            String subventionCustomerId = (String) orderDetail.getEmiSubventionValidationResponse().get(
-                    EMI_SUBVENTION_CUSTOMER_ID);
-            paymentOptionCardIndexNoPopulated(request, subventionvalidateRequest);
-            request.setAttribute(VALIDATE_EMI_REQUEST, subventionvalidateRequest);
-            request.setAttribute(VALIDATE_EMI_RESPONSE, subventionValidateResponse);
-            request.setAttribute(EMI_SUBVENTION_CUSTOMER_ID, subventionCustomerId);
-        }
-
-        // EMI Subvention All in one SDK Flow payment call
-        if (EPayMethod.EMI.getMethod().equals(request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE))
-                && null != request.getParameter(EMI_SUBVENTION_INFO)) {
-            EmiSubventionInfo emiSubventionInfo = JsonMapper.mapJsonToObject(request.getParameter(EMI_SUBVENTION_INFO),
-                    EmiSubventionInfo.class);
-
-            if (StringUtils.isBlank(emiSubventionInfo.getSubventionPlanId())
-                    || emiSubventionInfo.getFinalTransactionAmount() == null
-                    || StringUtils.isBlank(emiSubventionInfo.getFinalTransactionAmount().getValue())
-                    || CollectionUtils.isEmpty(emiSubventionInfo.getItemOfferDetails())) {
-                LOGGER.error(BizConstant.FailureLogs.EMI_SUBVENTION_INFO_IS_INVALID);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        BizConstant.FailureLogs.EMI_SUBVENTION_INFO_IS_INVALID, null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-            String jsonEmiSubventionInfo = JsonMapper.mapObjectToJson(emiSubventionInfo);
-            additionalParams.put(EMI_SUBVENTION_INFO, new String[] { jsonEmiSubventionInfo });
-
-        }
-
-        if ((orderDetail.getSimplifiedPaymentOffers() != null && orderDetail.getPaymentOffersApplied() != null)
-                || (orderDetail.getSimplifiedPaymentOffers() != null && orderDetail.getPaymentOffersAppliedV2() != null)
-                || (orderDetail.getPaymentOffersApplied() != null && orderDetail.getPaymentOffersAppliedV2() != null)) {
-            if (isNativeJsonRequest(request)) {
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(false)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-
-            failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
-                    .getResultCodeId(), RequestValidationException.getException().getMessage(), null, true);
-            throw RequestValidationException.getException();
-        }
-
-        additionalParams.put(AGG_TYPE, new String[] { orderDetail.getAggType() });
-        if (orderDetail.getOrderPricingInfo() != null) {
-            additionalParams.put(ORDER_PRICING_INFO,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getOrderPricingInfo()) });
-        }
-        additionalParams.put(OFFLINE_TXN_FLOW, new String[] { String.valueOf(orderDetail.isOfflineFlow()) });
-        if (orderDetail.getSimplifiedPaymentOffers() != null) {
-            additionalParams.put(SIMPLIFIED_PAYMENT_OFFERS,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getSimplifiedPaymentOffers()) });
-        }
-
-        if (orderDetail.getPaymentOffersApplied() != null) {
-            additionalParams.put(PROMO_PAYMENT_OFFERS,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getPaymentOffersApplied()) });
-        }
-        LOGGER.debug("token data from cache {}: ", orderDetail);
-
-        if (orderDetail.getPaymentOffersAppliedV2() != null) {
-            additionalParams.put(PROMO_PAYMENT_OFFERS_V2,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getPaymentOffersAppliedV2()) });
-        }
-
-        if (!StringUtils.equals(mid, orderDetail.getMid())) {
-            LOGGER.error("mid in token:{} and request:{} are different", orderDetail.getMid(), mid);
-            throw RequestValidationException.getException();
-        }
-        if (!StringUtils.equals(orderId, orderDetail.getOrderId())) {
-            LOGGER.error("orderid in token:{} and request:{} are different", orderDetail.getOrderId(), orderId);
-
-            throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                    .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                    .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-        }
-        if (ERequestType.NATIVE_MF.getType().equals(orderDetail.getRequestType())
-                || (orderDetail.getLinkDetailsData() != null && ERequestType.NATIVE_MF.getType().equals(
-                        orderDetail.getLinkDetailsData().getSubRequestType())))
-            EventUtils.pushTheiaEvents(EventNameEnum.PAYMENT_FOR_NATIVE_MF, new ImmutablePair<>("REQUEST_TYPE",
-                    ERequestType.NATIVE_MF.getType()));
-
-        String aggMid = request.getParameter(TheiaConstant.RequestParams.Native.AGG_MID);
-        if (StringUtils.isNotBlank(aggMid) && !StringUtils.equals(orderDetail.getAggMid(), aggMid)) {
-            LOGGER.error(BizConstant.FailureLogs.AGG_MID_IN_TOKEN_AND_REQUEST_ARE_DIFFERENT);
-            failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
-                    .getResultCodeId(), BizConstant.FailureLogs.AGG_MID_IN_TOKEN_AND_REQUEST_ARE_DIFFERENT, null, true);
-            throw RequestValidationException.getException();
-        }
-
-        if (orderDetail.getExtendInfo() != null && orderDetail.getExtendInfo().getSubsLinkInfo() != null
-                && StringUtils.isNotBlank(orderDetail.getExtendInfo().getSubsLinkInfo().getSubsLinkId())) {
-            additionalParams.put(SUBS_LINK_ID,
-                    new String[] { String.valueOf(orderDetail.getExtendInfo().getSubsLinkInfo().getSubsLinkId()) });
-        }
-
-        if (!aoaUtils.isAOAMerchant(mid) && isNativeJsonRequest
-                && !TokenType.SSO.getType().equals(request.getParameter(TOKEN_TYPE))) {
-            boolean isNativeJsonSupported = checkIfMerchantHasPreference((orderDetail.isOfflineFlow() && StringUtils
-                    .isNotEmpty(orderDetail.getAggMid())) ? orderDetail.getAggMid() : mid);
-            if (!isNativeJsonSupported
-                    && !checkIfMerchantHasCheckoutJSSupport(
-                            (orderDetail.isOfflineFlow() && StringUtils.isNotEmpty(orderDetail.getAggMid())) ? orderDetail.getAggMid()
-                                    : mid, request.getParameter(Native.WORKFLOW))) {
-                LOGGER.error("Merchant does not have preference nativeJsonRequest and not checkout flow/checkoutjs blocked, failing txn!");
-                failureLogUtil
-                        .setFailureMsgForDwhPush(
-                                RequestValidationException.getException().getResultCode().getResultCodeId(),
-                                "Merchant does not have preference nativeJsonRequest and not checkout flow/checkoutjs blocked, failing txn!",
-                                null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.FAILED).isRetryAllowed(false).build();
-            }
-        }
-        // Setting splitSettlementInfo
-        if (orderDetail.getSplitSettlementInfoData() != null) {
-            additionalParams
-                    .put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ExtendedInfoKeys.MERCHANT_SPLIT_SETTLEMENT_INFO,
-                            new String[] { JsonMapper.mapObjectToJson(orderDetail.getSplitSettlementInfoData()) });
-        }
-        // Setting link details
-        if (orderDetail.getLinkDetailsData() != null) {
-            additionalParams.put(
-                    com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.Native.SUB_REQUEST_TYPE,
-                    new String[] { orderDetail.getLinkDetailsData().getSubRequestType() });
-            additionalParams.put(
-                    com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.Native.LINK_DETAILS,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getLinkDetailsData()) });
-            if (orderDetail.getLinkDetailsData().getEdcEmiFields() != null) {
-                additionalParams.put(IS_EDC_LINK_TXN, new String[] { TRUE });
-            }
-        }
-        /*
-         * We are using this to send it to promoService
-         */
-        String merchantRequestedChannelId = request.getParameter(Native.CHANNEL_ID);
-        additionalParams.put("merchantRequestedChannelId", new String[] { merchantRequestedChannelId });
-
-        String channelID = getChannelId(request);
-        additionalParams.put(CHANNEL_ID, new String[] { channelID });
-
-        NativeCashierInfoResponse cashierInfoResponse = nativeSessionUtil.getCashierInfoResponse(txnToken);
-        Map<String, String> nativeSessionUtilExtendInfo = nativeSessionUtil.getExtendInfo(txnToken);
-        if (MapUtils.isNotEmpty(nativeSessionUtilExtendInfo)) {
-            additionalParams.put(PRODUCT_CODE, new String[] { nativeSessionUtilExtendInfo.get(PRODUCT_CODE) });
-        }
-        if (MapUtils.isNotEmpty(nativeSessionUtilExtendInfo)
-                && nativeSessionUtilExtendInfo.get(ADD_MONEY_DESTINATION) != null) {
-            additionalParams.put(ADD_MONEY_DESTINATION,
-                    new String[] { nativeSessionUtilExtendInfo.get(ADD_MONEY_DESTINATION).toString() });
-        }
-        /*
-         * For Nativeplus and enhanced Flow, userConsentFlag is extracted from
-         * extendInfo and added at first level
-         */
-        if (Boolean.valueOf(request.getParameter(USER_INVESTMENT_CONSENT_FLAG))) {
-            additionalParams.put(USER_INVESTMENT_CONSENT_FLAG,
-                    new String[] { request.getParameter(USER_INVESTMENT_CONSENT_FLAG) });
-        }
-        /*
-         * For Native Flow, a sub param map is not generated in controller hence
-         * fetching directly from request body ExtendInfo field
-         */
-        if (request.getParameter(EXTENDINFO) != null) {
-            try {
-                Map<String, String> extendInfo = JsonMapper.readValue(request.getParameter(EXTENDINFO),
-                        new TypeReference<Map<String, String>>() {
-                        });
-                if (extendInfo != null && !extendInfo.isEmpty()
-                        && Boolean.valueOf(extendInfo.get(USER_INVESTMENT_CONSENT_FLAG))) {
-                    additionalParams.put(USER_INVESTMENT_CONSENT_FLAG, new String[] { TRUE });
-                }
-            } catch (IOException e) {
-                LOGGER.error("Error in fetching field from extend_info {}", e);
-            }
-        }
-
-        if (cashierInfoResponse == null) {
-            String upiAccRefId = request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID);
-            if (StringUtils.isNotBlank(upiAccRefId)) {
-                cashierInfoResponse = callFetchPayOptions(txnToken, channelID, TheiaConstant.RequestHeaders.Version_V2,
-                        orderDetail);
-                validateAccRefIdInFetchPayV2(cashierInfoResponse, upiAccRefId);
-            } else {
-                cashierInfoResponse = callFetchPayOptions(txnToken, channelID, TheiaConstant.RequestHeaders.Version_V1,
-                        orderDetail);
-            }
-            if (orderDetail != null && TxnType.ESCROW.equals(orderDetail.getTxnType())) {
-                additionalParams.put(PRODUCT_CODE,
-                        new String[] { ProductCodes.StandardAcquiringEscrowDelayedSettlement.getId() });
-            }
-        }
-        if (cashierInfoResponse.getBody().isOnTheFlyKYCRequired()) {
-            additionalParams.put("isOnTheFlyKYCRequired", new String[] { Boolean.TRUE.toString() });
-        }
-
-        if (cashierInfoResponse.getBody().getMerchantDetails() != null
-                && StringUtils.isNotBlank(cashierInfoResponse.getBody().getMerchantDetails().getMerchantDisplayName())) {
-            additionalParams.put(MERCHANT_DISPLAY_NAME, new String[] { cashierInfoResponse.getBody()
-                    .getMerchantDetails().getMerchantDisplayName() });
-        }
-
-        // Validate for Fee on addMoney, this has been handled for native+ and
-        // native
-        // Risk reject in case of scwpay-Enhance and Third party Topups
-        validateFeeForAddMoney(request, nativeInitiateRequest, additionalParams, cashierInfoResponse, txnToken);
-
-        CCBillPayment ccBillPayment = orderDetail.getCcBillPayment();
-
-        if (ccBillPayment != null && StringUtils.isNotBlank(ccBillPayment.getCcBillNo())) {
-            LOGGER.info("CC bill payment request received");
-            additionalParams.put("ccBillPaymentRequest", new String[] { Boolean.TRUE.toString() });
-            additionalParams.put("CC_BILL_NO", new String[] { ccBillPayment.getCcBillNo() });
-        }
-
-        if (orderDetail.isNativeAddMoney()) {
-            LOGGER.info("Native AddMoney request received");
-            additionalParams.put("isNativeAddMoney", new String[] { Boolean.TRUE.toString() });
-        }
-        if (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))
-                && (EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow()) || EPayMode.HYBRID
-                        .equals(cashierInfoResponse.getBody().getPaymentFlow()))) {
-            WalletInfo walletInfo = theiaSessionDataServiceAdapterNative.getWalletInfoFromSession(request);
-            Double txnAmount = Double.parseDouble(orderDetail.getTxnAmount().getValue());
-            if (walletInfo != null && walletInfo.getWalletBalance() != null
-                    && txnAmount <= walletInfo.getWalletBalance()) {
-                cashierInfoResponse.getBody().setPaymentFlow(EPayMode.NONE);
-            }
-        }
-        boolean isEligibleForUpiToAddNPay = eligibleForUpiToAddNPay(request, mid, cashierInfoResponse);
-        EPayMode payMode = cashierInfoResponse.getBody().getPaymentFlow();
-        // As part of PGP-33786, the transaction has been converted to ADDANDPAY
-        if (isEligibleForUpiToAddNPay) {
-            EventUtils.pushTheiaEvents(
-                    EventNameEnum.ONLINE_NATIVE_PAYMENT_REQUEST,
-                    new ImmutablePair<>("Converting UPI transaction to ADDANDPAY for paymentMode", request
-                            .getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE)));
-            payMode = EPayMode.ADDANDPAY;
-        }
-
-        if (payMode.equals(EPayMode.HYBRID) || payMode.equals(EPayMode.ADDANDPAY)) {
-            LOGGER.info("Setting wallet balance from LitePayView Response");
-            String walletBalance = getWalletBalanceFromLitePayViewResponse(cashierInfoResponse);
-            additionalParams.put("WALLET_AMOUNT", new String[] { walletBalance });
-        }
-        additionalParams.put(PAYMENT_FLOW_EXPECTED, new String[] { payMode.getValue() });
-        additionalParams.put(TWO_FA_CONFIG, new String[] { request.getParameter(TWO_FA_CONFIG) });
-        additionalParams.put(SIM_SUBSCRIPTION_ID, new String[] { request.getParameter(SIM_SUBSCRIPTION_ID) });
-
-        Map<String, Object> litePayViewCacheInfo = nativeSessionUtil.getLitepayviewCacheInfo(txnToken);
-        if (litePayViewCacheInfo != null && litePayViewCacheInfo.containsKey("pwpEnabled")
-                && StringUtils.equals(Boolean.TRUE.toString(), (String) litePayViewCacheInfo.get("pwpEnabled"))) {
-            LOGGER.info("check value for pwp info");
-            String pwpCategory = payviewConsultServiceHelper.getCategoryForPWPMerchant(mid);
-            additionalParams.put("pwpCategory", new String[] { pwpCategory });
-        }
-
-        // Check for KYC in Enhanced Flow with ADD_AND_PAY
-        if (isEnhancedNativeFlow && payMode.equals(EPayMode.ADDANDPAY)) {
-
-            // Fail the transaction if kyc is still not done. Based on the flag
-            // isOnTheFlyKYCRequired is true.
-            if (cashierInfoResponse.getBody().isOnTheFlyKYCRequired()) {
-                UserDetailsBiz userDetailsBiz = nativeSessionUtil.getUserDetails(txnToken);
-                if (userDetailsBiz != null) {
-                    String userKycKey = "KYC_" + userDetailsBiz.getUserId();
-                    boolean hasCustomerDoneKYCRecently = nativeSessionUtil.getKey(userKycKey) != null ? true : false;
-
-                    boolean nativeKYCValidateFlag = Boolean.valueOf(ConfigurationUtil.getProperty(
-                            TheiaConstant.RequestParams.KYC_NATIVE_VALIDATE_FLAG, "false"));
-
-                    boolean isAllowedForAllCustomers = Boolean.valueOf(com.paytm.pgplus.common.config.ConfigurationUtil
-                            .getProperty(TheiaConstant.RequestParams.KYC_ALLOWED_ALL_FLAG, "false"));
-
-                    List<String> allowedCustIds = Collections.emptyList();
-
-                    if (StringUtils.isNotBlank(com.paytm.pgplus.common.config.ConfigurationUtil
-                            .getProperty(TheiaConstant.RequestParams.KYC_ALLOWED_LIST))) {
-                        allowedCustIds = Arrays.asList(ConfigurationUtil.getProperty(
-                                TheiaConstant.RequestParams.KYC_ALLOWED_LIST).split(","));
-                    }
-                    // Set the flag as true
-                    if (!hasCustomerDoneKYCRecently && nativeKYCValidateFlag
-                            && (isAllowedForAllCustomers || allowedCustIds.contains(userDetailsBiz.getUserId()))) {
-                        LOGGER.error(BizConstant.FailureLogs.FAILING_ADDNPAY_REQ_WITHOUT_VALID_KYC_USER);
-                        failureLogUtil.setFailureMsgForDwhPush(
-                                ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                                BizConstant.FailureLogs.FAILING_ADDNPAY_REQ_WITHOUT_VALID_KYC_USER, null, true);
-                        throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                                .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                                .setRetryMsg(ResultCode.INVALID_KYC.getResultMsg()).build();
-                    }
-                }
-            }
-        }
-
-        // Blocking emiSubvention and promo for pwp merchant
-        if ((orderDetail.getEmiSubventionToken() != null || orderDetail.getPaymentOffersApplied() != null || orderDetail
-                .getPaymentOffersAppliedV2() != null) && isPWPMerchant(mid)) {
-            LOGGER.error(BizConstant.FailureLogs.EMI_SUBVENTION_OR_PROMO_IS_NOT_APPLIED);
-            if (isNativeJsonRequest(request)) {
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-            failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
-                    .getResultCodeId(), BizConstant.FailureLogs.EMI_SUBVENTION_OR_PROMO_IS_NOT_APPLIED, null, true);
-            throw RequestValidationException.getException();
-        }
-
-        setNativeTxnInProcessFlagInCache(txnToken);
-        setMidOrderIdInRequestAttribute(request, mid, orderId);
-        additionalParams.put(TXN_TOKEN, new String[] { txnToken });
-        String paymentMode = request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
-        additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
-        EventUtils.pushTheiaEvents(EventNameEnum.REQUEST_WITH_PAYMENT_MODE, new ImmutablePair<>("PAYMENT_MODE",
-                paymentMode));
-
-        // for ZestMoney. Converting ZestMoney from emi channel to nb channel
-        if (request.getParameter(Native.CHANNEL_CODE) != null && request.getParameter(Native.CHANNEL_CODE).equals(ZEST)) {
-            paymentMode = EPayMethod.NET_BANKING.getMethod();
-            additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
-        }
-
-        if (EPayMethod.COD.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = EPayMethod.MP_COD.getMethod();
-        }
-
-        String paymentDetails = null;
-
-        additionalParams.put(PRE_AUTH_EXPIRY_DATE, new String[] { orderDetail.getPreAuthExpiryDate() });
-        additionalParams.put(
-                PRE_AUTH,
-                new String[] { String.valueOf(TxnType.AUTH.equals(orderDetail.getTxnType())
-                        || TxnType.ESCROW.equals(orderDetail.getTxnType())) });
-
-        if (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode)
-                || EPayMethod.CREDIT_CARD.getMethod().equalsIgnoreCase(paymentMode)
-                || EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
-            // TODO to be removed
-            EXT_LOGGER.customInfo("encCardInfo: {}, cardInfo: {}", request.getParameter(Native.ENCRYPTED_CARD_INFO),
-                    request.getParameter(Native.CARD_INFO));
-            if (StringUtils.isNotBlank(request.getParameter(Native.ENCRYPTED_CARD_INFO))
-                    && StringUtils.isNotBlank(request.getParameter(Native.CARD_INFO))) {
-                LOGGER.error(BizConstant.FailureLogs.RECEIVED_CARD_INFO_IN_BOTH);
-                failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
-                        .getResultCodeId(), BizConstant.FailureLogs.RECEIVED_CARD_INFO_IN_BOTH, null, true);
-                throw RequestValidationException.getException();
-            } else if (StringUtils.isNotBlank(request.getParameter(Native.ENCRYPTED_CARD_INFO))) {
-                additionalParams
-                        .put(PAYMENT_DETAILS, new String[] { request.getParameter(Native.ENCRYPTED_CARD_INFO) });
-                additionalParams.put(IS_ENCRYPTED_CARD_DETAIL, new String[] { IS_ENCRYPTED_CARD_DETAIL_STATUS });
-            } else if (cardTokenInfo != null) {
-                // Added this to supported encryped card info for payments
-                String cardInfo = request.getParameter(Native.CARD_INFO);
-                if (merchantPreferenceService.isEncryptedCardMerchant(mid) && isEncryptedCardDetails(cardInfo)) {
-                    cardInfo = getDecryptedCardInfo(cardInfo.trim());
-                }
-                String[] cardDetails = cardInfo.split(Pattern.quote("|"), -1);
-                if (cardDetails.length != 4 && cardDetails[2].trim().length() == 0) {
-                    LOGGER.error("Invalid cardDetails length or CVV is missing: {}", cardDetails.length);
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.INVALID_CARD_DETAILS_LENGTH_OR_CVV_MISSING, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-
-                String requiredCardDetails = parseCVV(cardDetails[2]);
-                additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails });
-                additionalParams.put(CARDTOKENINFO, new String[] { cardTokenInfo });
-                additionalParams.put(COFTTOKEN_TXN, new String[] { Boolean.TRUE.toString() });
-            } else if (ecomTokenInfo != null) {
-                EcomTokenInfo ecomTokenInfoObj = JsonMapper.mapJsonToObject(ecomTokenInfo, EcomTokenInfo.class);
-
-                if (StringUtils.isBlank(ecomTokenInfoObj.getEcomToken())
-                        || StringUtils.isBlank(ecomTokenInfoObj.getExpiryMonth())
-                        || StringUtils.isBlank(ecomTokenInfoObj.getExpiryYear())
-                        || StringUtils.isBlank(ecomTokenInfoObj.getAuthenticationValue())) {
-                    LOGGER.error("Invalid ecomTokenInfo : {}", ecomTokenInfoObj);
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.INVALID_ECOM_TOKEN_INFO, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-
-                String requiredCardDetails = null;
-                requiredCardDetails = JsonMapper.mapObjectToJson(ecomTokenInfoObj);
-
-                /*
-                 * update paymode as the bin cardtype, this is for ecomToken,
-                 * not savedCardId
-                 */
-                if ((EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode) || EPayMethod.CREDIT_CARD
-                        .getMethod().equalsIgnoreCase(paymentMode))
-                        && ecomTokenInfoObj.getEcomToken().trim().length() != 0) {
-                    String cardType = getPaymodeForEcomToken(ecomTokenInfoObj.getEcomToken().trim());
-                    if (StringUtils.isNotBlank(cardType)) {
-                        EPayMethod payMeth = EPayMethod.getPayMethodByMethod(cardType);
-                        if (payMeth != null) {
-                            paymentMode = payMeth.getMethod();
-                        }
-                    }
-                }
-                additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails });
-                additionalParams.put(ECOMTOKEN_TXN, new String[] { Boolean.TRUE.toString() });
-            } else {
-                String cardInfo = request.getParameter(Native.CARD_INFO);
-
-                // Below handling for Mutual Fund lumpsum payment with saved
-                // subscription
-                if (StringUtils.isBlank(cardInfo)
-                        && ERequestType.NATIVE_MF.getType().equals(orderDetail.getRequestType())) {
-                    String subsId = StringUtils.isNotBlank(request.getParameter(SUBSCRIPTION_ID)) ? request
-                            .getParameter(SUBSCRIPTION_ID) : request.getParameter(SUBS_ID);
-                    cardInfo = subsId.concat("|||");
-                    additionalParams.put(IS_SUBS_MOTO_PAYMENT, new String[] { TRUE });
-                }
-
-                /* full card Number encrypted with etm jar PGP-32407 */
-                if (merchantPreferenceService.isEncryptedCardMerchant(mid) && isEncryptedCardDetails(cardInfo)) {
-                    cardInfo = getDecryptedCardInfo(cardInfo.trim());
-                }
-
-                String[] cardDetails = cardInfo.split(Pattern.quote("|"), -1);
-                String requiredCardDetails = "";
-                if (cardDetails.length != 4) {
-                    LOGGER.error("Invalid cardDetails length: {}", cardDetails.length);
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.INVALID_CARD_DETAILS_LENGTH, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-
-                String cvv = parseCVV(cardDetails[2]);
-                cardDetails[2] = cvv;
-                if (cardDetails[0].trim().length() != 0) {
-                    if (isVisaSingleClickPayment(request)) {
-                        requiredCardDetails = cardDetails[0].trim() + MAESTRO_CVV;
-                    } else if (cardDetails[2].trim().length() > 0) {
-                        requiredCardDetails = cardDetails[0].trim() + "|" + cardDetails[2].trim();
-                    } else if (Boolean.valueOf(request.getParameter(IDEBIT_OPTION))) {
-                        requiredCardDetails = cardDetails[0].trim() + "|" + cardDetails[2].trim();
-                    } else {
-                        requiredCardDetails = cardDetails[0].trim() + MAESTRO_CVV;
-                    }
-                    if (cardDetails[0].trim().length() > 15 && cardDetails[0].trim().length() < 45) {
-                        additionalParams.put(COFTTOKEN_TXN, new String[] { Boolean.TRUE.toString() });
-                    }
-                } else if (cardDetails[1].trim().length() != 0
-                        && (isMaestroCardScheme(cardDetails[1].trim()) || isBajajCardScheme(cardDetails[1].trim()) || isVisaSingleClickPayment(request))) {
-                    requiredCardDetails = cardDetails[1].trim() + MAESTRO_CVV + getExpiry(request, cardDetails);
-                } else if (cardDetails[1].trim().length() != 0 && isBajajFnScheme(cardDetails[1].trim())) {
-                    requiredCardDetails = cardDetails[1].trim() + BAJAJFN_CVV + "|" + cardDetails[3].trim();
-                } else {
-                    requiredCardDetails = cardDetails[1].trim() + "|" + cardDetails[2].trim() + "|"
-                            + cardDetails[3].trim();
-                }
-                if (cardDetails[1].trim().length() != 0) {
-                    paymentDetails = requiredCardDetails;
-                }
-
-                /*
-                 * update paymode as the bin cardtype, this is for cardnumbers,
-                 * not savedCardId
-                 */
-                if ((EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode) || EPayMethod.CREDIT_CARD
-                        .getMethod().equalsIgnoreCase(paymentMode)) && cardDetails[1].trim().length() != 0) {
-                    String cardType = getPaymodeForCardBin(requiredCardDetails);
-                    if (StringUtils.isNotBlank(cardType)) {
-                        EPayMethod payMeth = EPayMethod.getPayMethodByMethod(cardType);
-                        if (payMeth != null) {
-                            paymentMode = payMeth.getMethod();
-                        }
-                    }
-                }
-                checkIfIssuerBlockOnMid(sendHTML, mid, orderDetail, requiredCardDetails,
-                        request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_FLOW));
-                additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails });
-            }
-
-            validateSubscriptionPayMethods(request, additionalParams, orderDetail, sendHTML);
-        }
-        if (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.AUTH_MODE))
-                && (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode))) {
-            String authMode = (String) request.getParameter(TheiaConstant.RequestParams.Native.AUTH_MODE);
-            if (AuthMode.OTP.getType().equals(authMode)) {
-                additionalParams.put(IDEBIT_OPTION, new String[] { "false" });
-            } else if (AuthMode.PIN.getType().equals(authMode)) {
-                additionalParams.put(IDEBIT_OPTION, new String[] { "true" });
-            } else {
-                LOGGER.error("Invalid authMode: {}", authMode);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        BizConstant.FailureLogs.INVALID_AUTH_MODE, null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-        }
-
-        String paymentFlow = request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_FLOW);
-        if (StringUtils.isBlank(paymentFlow)) {
-            paymentFlow = EPayMode.NONE.getValue();
-        }
-
-        if (!StringUtils.isBlank(paymentFlow)) {
-            EPayMode paymentFlowExpected = cashierInfoResponse.getBody().getPaymentFlow();
-            if (isEligibleForUpiToAddNPay) {
-                paymentFlow = EPayMode.ADDANDPAY.getValue();
-                paymentFlowExpected = EPayMode.ADDANDPAY;
-            }
-            if ((AOA_WORKFLOW).equals(request.getParameter(Native.WORKFLOW))) {
-                paymentFlowExpected = EPayMode.valueOf(paymentFlow);
-            }
-            if (!isPaymentFlowEnable(paymentFlow, paymentFlowExpected)) {
-                LOGGER.error("Invalid paymentFlow: {} but expected: {}", paymentFlow, paymentFlowExpected);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        BizConstant.FailureLogs.INVALID_PAYMENT_FLOW, null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-
-            }
-            if (!isPaymentFlowEnableForPayMethod(paymentFlow, paymentMode)) {
-                LOGGER.error("Invalid paymentFlow: {} payment flow not supported for payment mode: {}", paymentFlow,
-                        paymentMode);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        "Invalid paymentFlow, payment flow not supported for payment mode", null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-
-            if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)
-                    && PaymentFlow.HYBRID.getType().equals(paymentFlow)) {
-                String bankCode = StringUtils.substringBefore(request.getParameter("planId"), "|");
-                if (CashierConstant.BAJAJFN.equals(bankCode)) {
-                    LOGGER.error(BizConstant.FailureLogs.INVALID_PAYMODE_BAJAJFN_EMI);
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.INVALID_PAYMODE_BAJAJFN_EMI, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-            }
-
-            if (PaymentFlow.ADD_AND_PAY.equals(PaymentFlow.paymentFlowByEPayMode(EPayMode.valueOf(paymentFlow)))) {
-                additionalParams.put(ADD_MONEY, new String[] { "1" });
-            } else if (PaymentFlow.HYBRID.getType().equals(paymentFlow)) {
-                additionalParams.put(ADD_MONEY, new String[] { "0" });
-            }
-        }
-
-        if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
-            boolean paymentAllowed = isPaymentAllowedForEMIWithTxnAmt(request, cashierInfoResponse,
-                    orderDetail.getTxnAmount(), request.getParameter(Native.PLAN_ID),
-                    request.getParameter(Native.EMI_TYPE), isEnhancedNativeFlow, paymentDetails);
-            additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
-            additionalParams.put(Native.PLAN_ID, new String[] { request.getParameter(Native.PLAN_ID) });
-            if (!paymentAllowed) {
-                LOGGER.error("Invalid EmiTxnAmnt, paymentMode: {}", paymentMode);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(), "Invalid EmiTxnAmnt", null,
-                        true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-            // validate emiId passed in inititate Transaction
-            boolean isValidPlanId = isValidEmiPlanEnteredInNative(orderDetail, request.getParameter(Native.PLAN_ID));
-            if (!isValidPlanId) {
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null, true);
-
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-        }
-        if (EPayMethod.PPBL.getOldName().equalsIgnoreCase(paymentMode)) {
-            FetchAccountBalanceResponse fetchAccountBalanceResponse = null;
-            if ((TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE)))) {
-                String midSSOToken = nativeSessionUtil.createTokenForMidSSOFlow(request.getParameter(SSO_TOKEN), mid);
-                fetchAccountBalanceResponse = nativeSessionUtil.getAccountBalanceResponseFromCache(midSSOToken);
-            } else {
-                fetchAccountBalanceResponse = nativeSessionUtil.getAccountBalanceResponseFromCache(request
-                        .getParameter(Native.TXN_TOKEN));
-            }
-            if (fetchAccountBalanceResponse != null
-                    && StringUtils.isNotBlank(fetchAccountBalanceResponse.getAccountType())) {
-                additionalParams.put(PPBL_ACCOUNT_TYPE, new String[] { fetchAccountBalanceResponse.getAccountType() });
-            }
-        }
-
-        if (EPayMethod.BALANCE.getMethod().equals(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.PPI.value;
-        } else if (EPayMethod.PPBL.getOldName().equals(paymentMode)) {
-            additionalParams.put(BANK_CODE, new String[] { paymentMode });
-            if (StringUtils.isBlank(request.getParameter(TheiaConstant.RequestParams.Native.MPIN))) {
-                LOGGER.error(BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_PPBL);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_PPBL, null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-            additionalParams.put(PAYMENT_DETAILS,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.MPIN) });
-            paymentMode = PaymentTypeIdEnum.NB.value;
-            additionalParams.put(ACCOUNT_NUMBER,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER) });
-        } else if (EPayMethod.NET_BANKING.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.NB.value;
-            additionalParams.put(ACCOUNT_NUMBER,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER) });
-
-            String bankCode = request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE);
-            additionalParams.put(PAYMENT_DETAILS, new String[] { bankCode });
-            additionalParams.put(BANK_CODE, new String[] { bankCode });
-
-            PayOption merchantPayOption = cashierInfoResponse.getBody().getMerchantPayOption();
-
-            PayMethod nbPayMethod = merchantPayOption.getPayMethods().stream()
-                    .filter(payMethod -> EPayMethod.NET_BANKING.getMethod().equals(payMethod.getPayMethod())).findAny()
-                    .orElse(null);
-
-            if (StringUtils.isNotBlank(bankCode) && nbPayMethod != null
-                    && CollectionUtils.isNotEmpty(nbPayMethod.getPayChannelOptions())) {
-                for (PayChannelBase payChannelBase : nbPayMethod.getPayChannelOptions()) {
-                    Bank bank = (Bank) payChannelBase;
-                    if (bankCode.equalsIgnoreCase(bank.getInstId())) {
-                        additionalParams.put(BANK_NAME, new String[] { bank.getInstName() });
-                        break;
-                    }
-                }
-            }
-            verifyEnabledBankForNetBanking(nbPayMethod, bankCode, sendHTML);
-
-        } else if (EPayMethod.UPI.getMethod().equalsIgnoreCase(paymentMode)
-                || PaymentTypeIdEnum.UPI_LITE.value.equals(paymentMode)) {
-            if (!PaymentTypeIdEnum.UPI_LITE.value.equals(paymentMode)
-                    && ((StringUtils.isNotBlank(request.getParameter(CHANNEL_CODE)) && request.getParameter(
-                            CHANNEL_CODE).equals("UPI")) || StringUtils.isBlank(request.getParameter(Native.MPIN)))) {
-
-                Double txnAmount = Double.parseDouble(orderDetail.getTxnAmount().getValue());
-                Double upiCollectLimitUnverified = Double.parseDouble(com.paytm.pgplus.theia.utils.ConfigurationUtil
-                        .getProperty(UPI_COLLECT_LIMIT_UNVERIFIED, "2000"));
-                boolean blockPaymentForUPICollect = txnAmount > upiCollectLimitUnverified
-                        && !merchantPreferenceService.isUpiCollectWhitelisted(mid, true);
-                if (blockPaymentForUPICollect) {
-                    LOGGER.error("Merchant is not verified and UPI collect txn is > {} : {}",
-                            upiCollectLimitUnverified, orderDetail);
-                    failureLogUtil.setFailureMsgForDwhPush(RISK_REJECT.getCode(), "Merchant is not verified", null,
-                            true);
-                    throw new NativeFlowException.ExceptionBuilder(RISK_REJECT).isHTMLResponse(sendHTML)
-                            .isRetryAllowed(false).isRedirectEnhanceFlow(true).setRetryMsg(RISK_REJECT.getMessage())
-                            .build();
-                }
-            }
-
-            validationForCCOnUPI(request, sendHTML);
-            paymentMode = EPayMethod.UPI.getMethod();
-
-            verifyEnabledUpiPsp(orderDetail, request, sendHTML);
-            if (!EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow())
-                    && !validateUpiChannels(request, cashierInfoResponse, paymentMode, mid)) {
-                // throw exception
-                failureLogUtil.setFailureMsgForDwhPush(INVALID_PAYMENTMODE.getCode(), INVALID_PAYMENTMODE.getMessage(),
-                        null, true);
-                throw new NativeFlowException.ExceptionBuilder(INVALID_PAYMENTMODE).isHTMLResponse(sendHTML)
-                        .isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                        .setRetryMsg(INVALID_PAYMENTMODE.getMessage()).build();
-            }
-
-            if (ff4jUtils.isFeatureEnabledOnMid(mid, FEATURE_ENABLE_UPI_COLLECT_ON_ADDNPAY, false)) {
-                verifyEnableUpiCollectChannel(cashierInfoResponse, orderDetail, request, sendHTML);
-            }
-
-            if (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID))) {
-                String vpa = request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT);
-                if (StringUtils.isEmpty(vpa)) {
-                    LOGGER.info("Getting vpa from cache");
-                    vpa = getVPAForAccRefId(cashierInfoResponse, cashierInfoResponse.getBody().getPaymentFlow());
-                }
-                additionalParams.put(PAYMENT_DETAILS, new String[] { vpa });
-            } else {
-                additionalParams.put(PAYMENT_DETAILS,
-                        new String[] { request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT) });
-            }
-            additionalParams.put(ACCOUNT_NUMBER,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER) });
-            additionalParams.put(SEQUENCE_NO,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.SEQ_NUMBER) });
-            additionalParams.put(BANK_NAME,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.BANK_NAME) });
-            additionalParams.put(CREDIT_BLOCK,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.CREDIT_BLOCK) });
-            additionalParams.put(MPIN, new String[] { request.getParameter(TheiaConstant.RequestParams.Native.MPIN) });
-            additionalParams.put(DEVICE_ID,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID) });
-            additionalParams.put(UPI_ACC_REF_ID,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID) });
-            additionalParams.put(ORIGIN_CHANNEL, new String[] { request.getParameter(ORIGIN_CHANNEL) });
-            additionalParams.put(BizConstant.UPILITE_REQUEST_DATA,
-                    new String[] { request.getParameter(BizConstant.UPILITE_REQUEST_DATA) });
-
-            if (StringUtils.isNotBlank(request.getParameter(MERCHANT_VPA))) {
-                additionalParams.put(MERCHANT_VPA, new String[] { request.getParameter(MERCHANT_VPA) });
-            }
-            paymentMode = PaymentTypeIdEnum.UPI.value;
-
-        } else if (EPayMethod.UPI_INTENT.getMethod().equalsIgnoreCase(paymentMode)) {
-            LOGGER.info("Payment Request received for UPI Intent,Setting Parameters for the same");
-            if (!EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow())
-                    && !validateUpiChannels(request, cashierInfoResponse, paymentMode, mid)) {
-                // throw exception
-                failureLogUtil.setFailureMsgForDwhPush(INVALID_PAYMENTMODE.getCode(), INVALID_PAYMENTMODE.getMessage(),
-                        null, true);
-                throw new NativeFlowException.ExceptionBuilder(INVALID_PAYMENTMODE).isHTMLResponse(sendHTML)
-                        .isRetryAllowed(false).isRedirectEnhanceFlow(true)
-                        .setRetryMsg(INVALID_PAYMENTMODE.getMessage()).build();
-            }
-            if (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID))) {
-                String vpa = request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT);
-                if (StringUtils.isEmpty(vpa)) {
-                    LOGGER.info("Getting vpa from cache");
-                    vpa = getVPAForAccRefId(cashierInfoResponse, cashierInfoResponse.getBody().getPaymentFlow());
-                }
-                additionalParams.put(PAYMENT_DETAILS, new String[] { vpa });
-            } else {
-                additionalParams.put(PAYMENT_DETAILS,
-                        new String[] { request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT) });
-            }
-            additionalParams.put(Native.TXN_NOTE, new String[] { request.getParameter(Native.TXN_NOTE) });
-            additionalParams.put(Native.REF_URL, new String[] { request.getParameter(Native.REF_URL) });
-            additionalParams.put(Native.AGG_MID, new String[] { request.getParameter(AGG_MID) });
-            additionalParams.put(Native.EXTEND_INFO, new String[] { request.getParameter(Native.EXTEND_INFO) });
-            additionalParams.put(PAYMENT_DETAILS, new String[] { "dummyvpa@upi" });
-            additionalParams.put(VIRTUAL_PAYMENT_ADDRESS, new String[] { "dummyvpa@upi" });
-            additionalParams.put(
-                    com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ,
-                    new String[] { "true" });
-            request.setAttribute(
-                    com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ, "true");
-            additionalParams.put(OS_TYPE, new String[] { request.getParameter(OS_TYPE) });
-            additionalParams.put(PSP_APP, new String[] { request.getParameter(PSP_APP) });
-            paymentMode = PaymentTypeIdEnum.UPI.value;
-        } else if (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.DC.value;
-        } else if (EPayMethod.CREDIT_CARD.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.CC.value;
-        } else if ((EPayMethod.PAYTM_DIGITAL_CREDIT.getMethod().equalsIgnoreCase(paymentMode))) {
-            String addMoney = null;
-            if (null != additionalParams.get(ADD_MONEY)) {
-                addMoney = additionalParams.get(ADD_MONEY)[0];
-            }
-            if (isPayMethodAllowed(paymentMode, txnToken, addMoney, false, null, mid)) {
-                /*
-                 * in case of native tempToken to get paytm_digital_credit data
-                 * is txnToken but if data in redis is saved on mid+sso(for
-                 * tokenType sso),then tempToken will be mid+sso
-                 */
-                String tempToken = txnToken;
-                DigitalCreditAccountInfo accountInfo = (DigitalCreditAccountInfo) getAccountInfo(cashierInfoResponse,
-                        paymentFlow);
-                if (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE)) && null == accountInfo) {
-                    // in case of sso based flow fetch balance will save account
-                    // info on mid+sso token
-                    tempToken = nativeSessionUtil.createTokenForMidSSOFlow(orderDetail.getPaytmSsoToken(),
-                            orderDetail.getMid());
-                    accountInfo = checkAccountInfoForSSOBasedFlow(tempToken, paymentFlow);
-                }
-
-                if (null == accountInfo) {
-                    /*
-                     * now since in case of native we are not sure merchant will
-                     * hit fetch balance api or not. So we will internally call
-                     * fetch balance
-                     */
-                    BalanceInfoResponse balanceInfoResponse = fetchBalance(EPayMethod.PAYTM_DIGITAL_CREDIT.getMethod(),
-                            txnToken, request);
-
-                    cashierInfoResponse = nativeSessionUtil.getCashierInfoResponse(txnToken);
-                    accountInfo = (DigitalCreditAccountInfo) getAccountInfo(cashierInfoResponse, paymentFlow);
-                    if (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE)) && null == accountInfo) {
-                        // in case of sso based flow fetch balance will save
-                        // account
-                        // info on mid+sso token
-
-                        accountInfo = checkAccountInfoForSSOBasedFlow(tempToken, paymentFlow);
-                    }
-
-                    if (!ResultCode.SUCCESS.getResultStatus().equals(
-                            balanceInfoResponse.getBody().getResultInfo().getResultStatus())
-                            || null == accountInfo) {
-                        // if now also account info is null or fetch balance
-                        // call fails , break the transaction.
-                        LOGGER.error(BizConstant.FailureLogs.ACCOUNT_INFO_FOR_PAYTM_DIGITAL_CREDIT_IS_UNAVAILABLE);
-                        failureLogUtil.setFailureMsgForDwhPush(
-                                ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                                BizConstant.FailureLogs.ACCOUNT_INFO_FOR_PAYTM_DIGITAL_CREDIT_IS_UNAVAILABLE, null,
-                                true);
-                        throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                                .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                                .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                    }
-                }
-                String passCode = request.getParameter(TheiaConstant.RequestParams.Native.MPIN);
-                if (StringUtils.isBlank(passCode) && isPostPaidMPinRequired(tempToken)) {
-                    LOGGER.error(BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_POST_PAID);
-                    failureLogUtil.setFailureMsgForDwhPush(
-                            ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                            BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_POST_PAID, null, true);
-                    throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                            .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                            .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-                }
-                StringBuilder digitalCreditPaymentDetails = new StringBuilder();
-
-                additionalParams.put(KYC_CODE, new String[] { accountInfo.getExtendInfo().get(KYC_CODE) });
-                additionalParams.put(KYC_VERSION, new String[] { accountInfo.getExtendInfo().get(KYC_VERSION) });
-                additionalParams.put(FLOW_TYPE, new String[] { FLOW_TYPE_TRANSACTION });
-
-                digitalCreditPaymentDetails.append(accountInfo.getPayerAccountNo()).append("|")
-                        .append(accountInfo.getExtendInfo().get(LENDER_ID)).append("|")
-                        .append(StringUtils.isNotBlank(passCode) ? passCode : "");
-                additionalParams.put(PAYMENT_DETAILS, new String[] { digitalCreditPaymentDetails.toString() });
-                paymentMode = PaymentTypeIdEnum.PAYTM_DIGITAL_CREDIT.value;
-            }
-        } else if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.EMI.value;
-            additionalParams.put(BANK_CODE,
-                    new String[] { StringUtils.substringBefore(request.getParameter("planId"), "|") });
-            additionalParams.put(EMI_TYPE, new String[] { request.getParameter("EMI_TYPE") });
-        } else if (EPayMethod.BANK_MANDATE.getMethod().equalsIgnoreCase(paymentMode)) {
-            LOGGER.info("Request received for creating bank Mandates, setting parameters for the same");
-            paymentMode = PaymentTypeIdEnum.BANK_MANDATE.value;
-            additionalParams.put(ACCOUNT_NUMBER,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER) });
-            additionalParams.put(PAYMENT_DETAILS,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE) });
-            additionalParams.put(BANK_CODE,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE) });
-            additionalParams.put(UPI_ACC_REF_ID,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID) });
-            additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.USER_NAME,
-                    new String[] { request.getParameter(Native.USER_NAME) });
-            additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.ACCOUNT_TYPE,
-                    new String[] { request.getParameter(Native.ACCOUNT_TYPE) });
-            additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.BANK_IFSC,
-                    new String[] { request.getParameter(Native.BANK_IFSC) });
-            additionalParams.put(
-                    com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.MANDATE_AUTH_MODE,
-                    new String[] { request.getParameter(Native.MANDATE_AUTH_MODE) });
-            additionalParams.put(Native.MANDATE_TYPE, new String[] { request.getParameter(Native.MANDATE_TYPE) });
-            additionalParams.put(BANK_NAME,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.BANK_NAME) });
-        } else if (EPayMethod.GIFT_VOUCHER.getMethod().equalsIgnoreCase(paymentMode)) {
-            paymentMode = PaymentTypeIdEnum.GIFT_VOUCHER.value;
-            String templateId = request.getParameter(TheiaConstant.RequestParams.Native.MGV_TEMPLATE_ID);
-            if (StringUtils.isBlank(templateId)) {
-                LOGGER.error(BizConstant.FailureLogs.INVALID_TEMPLATE_ID_FOR_MGV);
-                failureLogUtil.setFailureMsgForDwhPush(
-                        ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                        BizConstant.FailureLogs.INVALID_TEMPLATE_ID_FOR_MGV, null, true);
-                throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                        .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                        .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-            }
-
-            additionalParams.put(TheiaConstant.RequestParams.Native.MGV_TEMPLATE_ID, new String[] { templateId });
-        }
-
-        String saveForFuture = request.getParameter(TheiaConstant.RequestParams.Native.STORE_INSTRUMENT);
-        if ("1".equals(saveForFuture)) {
-            additionalParams.put(TheiaConstant.RequestParams.STORE_CARD, new String[] { "1" });
-        }
-        String industryTypeId = getIndustryTypeId(mid);
-        additionalParams.put(TheiaConstant.RequestParams.INDUSTRY_TYPE_ID, new String[] { industryTypeId });
-        additionalParams.put(TheiaConstant.RequestParams.AUTH_MODE, new String[] { "3D" });
-
-        if (aoaUtils.isAOAMerchant(mid) && !ERequestType.isSubscriptionRequest(orderDetail.getRequestType())) {
-            additionalParams.put(REQUEST_TYPE, new String[] { TheiaConstant.RequestTypes.UNI_PAY });
-
-        } else if (ERequestType.isSubscriptionRequest(orderDetail.getRequestType())) {
-            additionalParams.put(REQUEST_TYPE, new String[] { orderDetail.getRequestType() });
-            if (StringUtils.isNotEmpty(request.getParameter(SUBSCRIPTION_ID))) {
-                additionalParams.put(SUBSCRIPTION_ID, new String[] { request.getParameter(SUBSCRIPTION_ID) });
-            } else {
-                StringBuilder key = new StringBuilder(orderDetail.getRequestType()).append(txnToken);
-                if (aoaUtils.isAOAMerchant(mid)) {
-                    LOGGER.error("AOA subscription client call is being used");
-                    // AoaSubscriptionCreateResponse aoaSubscriptionResponse =
-                    // (AoaSubscriptionCreateResponse)
-                    // theiaTransactionalRedisUtil
-                    // .get(key.toString());
-                    // if (aoaSubscriptionResponse != null) {
-                    // additionalParams.put(SUBSCRIPTION_ID,
-                    // new String[] {
-                    // aoaSubscriptionResponse.getSubscriptionId() });
-                    // }
-                } else {
-                    SubscriptionResponse subscriptionResponse = (SubscriptionResponse) theiaTransactionalRedisUtil
-                            .get(key.toString());
-                    if (subscriptionResponse != null) {
-                        additionalParams
-                                .put(SUBSCRIPTION_ID, new String[] { subscriptionResponse.getSubscriptionId() });
-                        if (StringUtils.isNotBlank(subscriptionResponse.getPaymentMid())
-                                && StringUtils.isNotBlank(subscriptionResponse.getPaymentOrderId())) {
-                            additionalParams.put(DUMMY_MERCHANT_ID,
-                                    new String[] { subscriptionResponse.getPaymentMid() });
-                            additionalParams.put(DUMMY_ORDER_ID,
-                                    new String[] { subscriptionResponse.getPaymentOrderId() });
-                            additionalParams.put(AUTO_REFUND, new String[] { Boolean.TRUE.toString() });
-                        }
-                    }
-                }
-            }
-
-            SubscriptionTransactionRequestBody subscriptionTransactionRequestBody = (SubscriptionTransactionRequestBody) orderDetail;
-            if (subscriptionTransactionRequestBody != null) {
-                additionalParams.put(SUBS_FREQUENCY_UNIT,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionFrequencyUnit() });
-                additionalParams.put(SUBS_EXPIRY_DATE,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionExpiryDate() });
-
-                additionalParams.put(SUBS_START_DATE,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionStartDate() });
-
-                additionalParams.put(SUBS_GRACE_DAYS,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionGraceDays() });
-                additionalParams.put(VALIDATE_ACCOUNT_NUMBER,
-                        new String[] { subscriptionTransactionRequestBody.getValidateAccountNumber() });
-                if (StringUtils.isNotBlank(subscriptionTransactionRequestBody.getAccountNumber()))
-                    additionalParams.put(ACCOUNT_NUMBER,
-                            new String[] { subscriptionTransactionRequestBody.getAccountNumber() });
-                additionalParams.put(ALLOW_UNVERIFIED_ACCOUNT,
-                        new String[] { subscriptionTransactionRequestBody.getAllowUnverifiedAccount() });
-                additionalParams.put(SUBS_FREQUENCY,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionFrequency() });
-                additionalParams.put(SUBS_ENABLE_RETRY,
-                        new String[] { subscriptionTransactionRequestBody.getSubscriptionEnableRetry() });
-                additionalParams.put(FLEXI_SUBSCRIPTION,
-                        new String[] { String.valueOf(subscriptionTransactionRequestBody.isFlexiSubscription()) });
-            }
-
-        } else {
-            additionalParams.put(REQUEST_TYPE, new String[] { TheiaConstant.RequestTypes.NATIVE });
-
-        }
-
-        if (ERequestType.NATIVE_SUBSCRIPTION.getType().equals(
-                request.getParameter(TheiaConstant.RequestParams.REQUEST_TYPE))) {
-            additionalParams.put(REQUEST_TYPE, new String[] { TheiaConstant.RequestTypes.NATIVE_SUBSCRIPTION });
-        }
-
-        if ((merchantPreferenceService.isEligibleForMultipleMBIDFlow(mid) && ff4JHelper.isFF4JFeatureForMidEnabled(
-                ENABLE_TPV_FOR_ALL_REQUEST_TYPES, mid))
-                || (TheiaConstant.RequestTypes.NATIVE_MF.equals(orderDetail.getRequestType())
-                        || TheiaConstant.RequestTypes.NATIVE_ST.equals(orderDetail.getRequestType()) || (orderDetail
-                        .getLinkDetailsData() != null && (TheiaConstant.RequestTypes.NATIVE_MF.equals(orderDetail
-                        .getLinkDetailsData().getSubRequestType()) || TheiaConstant.RequestTypes.NATIVE_ST
-                        .equals(orderDetail.getLinkDetailsData().getSubRequestType()))))) {
-            // if (merchantPreferenceService.isEligibleForMultipleMBIDFlow(mid)
-            // &&
-            // ff4JHelper.isFF4JFeatureForMidEnabled(ENABLE_TPV_FOR_ALL_REQUEST_TYPES,
-            // mid)) {
-            // additionalParams.put(REQUEST_TYPE, new
-            // String[]{TheiaConstant.RequestTypes.NATIVE});
-            // } else if (orderDetail.getLinkDetailsData() != null) {
-            if (orderDetail.getLinkDetailsData() != null) {
-                if (!isEnhancedNativeFlow) {
-                    additionalParams.put(REQUEST_TYPE, new String[] { orderDetail.getLinkDetailsData()
-                            .getSubRequestType() });
-                }
-            } else {
-                if (!orderDetail.getRequestType().equals("Payment"))
-                    additionalParams.put(REQUEST_TYPE, new String[] { orderDetail.getRequestType() });
-            }
-            LOGGER.info("Request Recieved - {}, Updated Request Type - {}", orderDetail.getRequestType(),
-                    additionalParams.get(REQUEST_TYPE));
-
-            additionalParams.put(VALIDATE_ACCOUNT_NUMBER, new String[] { "false" });
-            if (StringUtils.isNotBlank(orderDetail.getValidateAccountNumber())) {
-                additionalParams.put(VALIDATE_ACCOUNT_NUMBER, new String[] { orderDetail.getValidateAccountNumber() });
-            }
-            if (StringUtils.isNotBlank(orderDetail.getAllowUnverifiedAccount())) {
-                additionalParams
-                        .put(ALLOW_UNVERIFIED_ACCOUNT, new String[] { orderDetail.getAllowUnverifiedAccount() });
-            }
-            if (StringUtils.isNotBlank(orderDetail.getAccountNumber())) {
-                LOGGER.info("Overriding account Number from txnToken");
-                additionalParams.put(ACCOUNT_NUMBER, new String[] { orderDetail.getAccountNumber() });
-            }
-        }
-        additionalParams.put(Native.TOKEN_TYPE, new String[] { request.getParameter(Native.TOKEN_TYPE) });
-        additionalParams.put(TXN_AMOUNT, new String[] { orderDetail.getTxnAmount().getValue() });
-        if (orderDetail.getTipAmount() != null && orderDetail.getTipAmount().getValue() != null)
-            additionalParams.put(TIP_AMOUNT, new String[] { orderDetail.getTipAmount().getValue() });
-        additionalParams.put(SSO_TOKEN, new String[] { orderDetail.getPaytmSsoToken() });
-        additionalParams.put(CALLBACK_URL, new String[] { orderDetail.getCallbackUrl() });
-        additionalParams.put(WEBSITE, new String[] { orderDetail.getWebsiteName() });
-        additionalParams.put(MID, new String[] { mid });
-        additionalParams.put(ORDER_ID, new String[] { orderId });
-        additionalParams.put(PAYMENT_TYPE_ID, new String[] { paymentMode });
-
-        if (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID))) {
-            additionalParams.put(DEVICE_ID,
-                    new String[] { request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID) });
-        } else {
-            additionalParams.put(DEVICE_ID, new String[] { request.getParameter(DEVICE_ID_FOR_RISK) });
-        }
-
-        if (orderDetail.getExtendInfo() != null) {
-            additionalParams.put(MERCH_UNQ_REF, new String[] { orderDetail.getExtendInfo().getMercUnqRef() });
-            additionalParams.put(UDF_1, new String[] { orderDetail.getExtendInfo().getUdf1() });
-            additionalParams.put(UDF_2, new String[] { orderDetail.getExtendInfo().getUdf2() });
-            additionalParams.put(UDF_3, new String[] { orderDetail.getExtendInfo().getUdf3() });
-            additionalParams.put(SUB_WALLET_AMOUNT, new String[] { orderDetail.getExtendInfo().getSubwalletAmount() });
-            additionalParams.put(ADDITIONAL_INFO, new String[] { orderDetail.getExtendInfo().getComments() });
-
-            // setting link specific variables
-            additionalParams.put(LINK_ID, new String[] { orderDetail.getExtendInfo().getLinkId() });
-            additionalParams.put(INVOICE_ID, new String[] { orderDetail.getExtendInfo().getLinkInvoiceId() });
-            additionalParams.put(LINK_DESCRIPTION, new String[] { orderDetail.getExtendInfo().getLinkDesc() });
-            additionalParams.put(LINK_NAME, new String[] { orderDetail.getExtendInfo().getLinkName() });
-
-            if (StringUtils.isNotBlank(orderDetail.getExtendInfo().getAmountToBeRefunded())) {
-                additionalParams
-                        .put(AMOUNT_TO_BE_REFUNDED, new String[] { JsonMapper.mapObjectToJson(orderDetail
-                                .getExtendInfo().getAmountToBeRefunded()) });
-            }
-        }
-
-        // setting link details in case of link based payment of MF, ST
-        if (orderDetail.getLinkDetailsData() != null) {
-            additionalParams.put(LINK_ID, new String[] { orderDetail.getLinkDetailsData().getLinkId() });
-            additionalParams.put(INVOICE_ID, new String[] { orderDetail.getLinkDetailsData().getInvoiceId() });
-            additionalParams.put(LINK_DESCRIPTION,
-                    new String[] { orderDetail.getLinkDetailsData().getLinkDescription() });
-            additionalParams.put(LINK_NAME, new String[] { orderDetail.getLinkDetailsData().getLinkName() });
-        }
-        if (null != request.getParameter(WALLET_TYPE)) {
-            additionalParams.put(WALLET_TYPE, new String[] { request.getParameter(WALLET_TYPE) });
-        }
-
-        if (orderDetail.getUserInfo() != null) {
-            additionalParams.put(CUST_ID, new String[] { orderDetail.getUserInfo().getCustId() });
-            additionalParams.put(MOBILE_NO, new String[] { orderDetail.getUserInfo().getMobile() });
-            additionalParams.put(ADDRESS_1, new String[] { orderDetail.getUserInfo().getAddress() });
-            additionalParams.put(PINCODE, new String[] { orderDetail.getUserInfo().getPincode() });
-        }
-        if (null != orderDetail.getShippingInfo()) {
-            additionalParams.put(SHIPPING_INFO,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getShippingInfo()) });
-        }
-        if (null != orderDetail.getPromoCode()) {
-            additionalParams.put(PROMO_CAMP_ID, new String[] { orderDetail.getPromoCode() });
-        }
-
-        if (null != orderDetail.getExtendInfo()) {
-            additionalParams.put(ConstantsUtil.PARAMETERS.REQUEST.EXTENDINFO,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getExtendInfo()) });
-        }
-
-        if (null != orderDetail.getEmiOption()) {
-            additionalParams.put(EMI_OPTIONS, new String[] { orderDetail.getEmiOption() });
-        }
-
-        if (!StringUtils.isEmpty(orderDetail.getCardTokenRequired())) {
-            additionalParams.put(IS_CARD_TOKEN_REQUIRED, new String[] { orderDetail.getCardTokenRequired() });
-        }
-
-        // cart validation is to be done by backend
-        if ((isEnhancedNativeFlow || isNativeJsonRequest)
-                && StringUtils.isNotBlank(orderDetail.getCartValidationRequired())) {
-            additionalParams.put(IS_CART_VALIDATION_REQUIRED, new String[] { orderDetail.getCartValidationRequired() });
-        }
-        if (orderDetail.getAdditionalInfo() != null) {
-            additionalParams.put(ADDITIONALINFO,
-                    new String[] { JsonMapper.mapObjectToJson(orderDetail.getAdditionalInfo()) });
-        }
-
-        // channelId to be put for enhanced as it was received during the call
-        // to render
-        if (isEnhancedNativeFlow && StringUtils.isNotBlank(orderDetail.getChannelId())) {
-            additionalParams.put(CHANNEL_ID, new String[] { orderDetail.getChannelId() });
-        }
-
-        if ((isEnhancedNativeFlow || isNativeJsonRequest)
-                && StringUtils.isNotBlank(request.getParameter(Native.APP_ID))) {
-            additionalParams.put(APP_ID, new String[] { request.getParameter(Native.APP_ID) });
-        }
-
-        if (isNativeJsonRequest) {
-            additionalParams.put(NATIVE_JSON_REQUEST,
-                    new String[] { String.valueOf(request.getAttribute(NATIVE_JSON_REQUEST)) });
-        }
-
-        String deepLinkReq[] = additionalParams
-                .get(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ);
-        if (deepLinkReq != null && deepLinkReq.length > 0 && "true".equals(deepLinkReq[0])) {
-            LOGGER.info("Setting Parameters for UPI Intent");
-            // OVERRIDING ADDITIONAL_INFO for UPI_INTENT paymentMode
-            additionalParams.put(ADDITIONAL_INFO, new String[] { request.getParameter(Native.EXTEND_INFO) });
-            additionalParams.put(INSTA_DEEP_LINK, new String[] { "true" });
-            additionalParams.put(ACCOUNT_NUMBER, new String[] { orderDetail.getAccountNumber() });
-        }
-        /**
-         * for Corporate Advance Deposit
-         */
-        additionalParams.put(CORPORATE_CUST_ID, new String[] { orderDetail.getCorporateCustId() });
-
-        additionalParams.put(CARD_HASH, new String[] { orderDetail.getCardHash() });
-
-        if (orderDetail.getPayableAmount() != null) {
-            /*
-             * this amount will be sent to promo-service
-             */
-            additionalParams.put(PROMO_AMOUNT, new String[] { orderDetail.getPayableAmount().getValue() });
-        }
-
-        if (EPayMethod.BALANCE.getMethod().equals(paymentMode) || PaymentTypeIdEnum.PPI.getValue().equals(paymentMode)) {
-            setFlagToRedirectToShowPaymentPage(request, additionalParams, paymentFlow);
-        }
-
-        if (TokenType.SSO.getType().equalsIgnoreCase(request.getParameter(Native.TOKEN_TYPE))) {
-            additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT, new String[] { TRUE });
-        } else {
-            if (orderDetail != null && orderDetail.isOfflineFlow())
-                additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT, new String[] { TRUE });
-            else
-                additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT, new String[] { FALSE });
-        }
-        if (EPayMethod.BANK_TRANSFER.getMethod().equals(paymentMode)) {
-            additionalParams.put(VAN_INFO, new String[] { JsonMapper.mapObjectToJson(orderDetail.getVanInfo()) });
-            additionalParams.put(TPV_INFOS, new String[] { JsonMapper.mapObjectToJson(orderDetail.getTpvInfo()) });
-        }
-        String preferredOtpPage = request.getParameter(Native.PREFERRED_OTP_PAGE);
-        if (StringUtils.isNotBlank(preferredOtpPage)
-                && !(PreferredOtpPage.MERCHANT.getValue().equals(preferredOtpPage) || PreferredOtpPage.BANK.getValue()
-                        .equals(preferredOtpPage))) {
-            LOGGER.error("PreferredOtpPage Value found {} Value Could only be {} {}", preferredOtpPage,
-                    PreferredOtpPage.MERCHANT.getValue(), PreferredOtpPage.BANK.getValue());
-            failureLogUtil.setFailureMsgForDwhPush(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
-                    ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null, true);
-            throw new NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
-                    .isHTMLResponse(sendHTML).isRetryAllowed(true)
-                    .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
-        }
-        additionalParams.put(Native.PREFERRED_OTP_PAGE, new String[] { preferredOtpPage });
-
-        if (request.getParameter(CARD_PRE_AUTH_TYPE) != null) {
-            additionalParams.put(CARD_PRE_AUTH_TYPE, new String[] { request.getParameter(CARD_PRE_AUTH_TYPE) });
-        }
-        if (request.getParameter(PRE_AUTH_BLOCK_SECONDS) != null) {
-            additionalParams.put(PRE_AUTH_BLOCK_SECONDS, new String[] { request.getParameter(PRE_AUTH_BLOCK_SECONDS) });
-        }
-
-        if (isEligibleForUpiToAddNPay) {
-            additionalParams.put(UPI_CONVERTED_TO_ADDNPAY, new String[] { TRUE });
-        }
-
-        if (request.getParameter(Native.ADD_ONE_RUPEE) != null) {
-            additionalParams.put(Native.ADD_ONE_RUPEE, new String[] { request.getParameter(Native.ADD_ONE_RUPEE) });
-        }
-
-        if (failIfWalletInactive(paymentFlow, paymentMode, cashierInfoResponse)) {
-            LOGGER.error(BizConstant.FailureLogs.USER_WALLET_IS_DEACTIVATED);
-            failureLogUtil.setFailureMsgForDwhPush(ResponseConstants.WALLET_INACTIVE_FAILURE.getCode(),
-                    BizConstant.FailureLogs.USER_WALLET_IS_DEACTIVATED, null, true);
-            throw new NativeFlowException.ExceptionBuilder(ResponseConstants.WALLET_INACTIVE_FAILURE)
-                    .isHTMLResponse(sendHTML).isRetryAllowed(false)
-                    .setRetryMsg(ResponseConstants.WALLET_INACTIVE_FAILURE.getMessage()).build();
-
-        }
-        if (request.getAttribute(PAYERCMID) != null) {
-            additionalParams.put(PAYER_CMID, new String[] { (String) request.getAttribute(PAYERCMID) });
-        }
-
-        additionalParams.put(VARIABLE_LENGTH_OTP_SUPPORTED,
-                new String[] { request.getParameter(VARIABLE_LENGTH_OTP_SUPPORTED) });
-        if (isNativeJsonRequest)
-            additionalParams.put(SOURCE, new String[] { request.getHeader(SOURCE) });
-
-        return additionalParams;
-    }
+    // public Map<String, String[]> getAdditionalParamMap(final
+    // HttpServletRequest request,
+    // final HttpServletResponse response) throws Exception {
+    // Map<String, String[]> additionalParams = new HashMap<>();
+    //
+    // boolean isEnhancedNativeFlow = isEnhancedNativeFlow(request);
+    // boolean isNativeJsonRequest = isNativeJsonRequest(request);
+    //
+    // if (isEnhancedNativeFlow) {
+    // additionalParams.put(ENHANCED_CASHIER_PAYMENT_REQUEST, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    //
+    // pushV1PtcRequestEvent(request);
+    //
+    // boolean sendHTML = true;
+    // /*
+    // * check if request is NativeJsonRequest or enhancedNativeFlow,
+    // * returnType should be json
+    // */
+    // if (isNativeJsonRequest || isEnhancedNativeFlow) {
+    // sendHTML = false;
+    // }
+    //
+    // String orderId =
+    // request.getParameter(TheiaConstant.RequestParams.Native.ORDER_ID);
+    //
+    // String txnToken = request.getParameter(Native.TXN_TOKEN);
+    // if (StringUtils.isBlank(txnToken) &&
+    // StringUtils.isNotBlank(request.getParameter(Native.GUEST_TOKEN))) {
+    // txnToken = request.getParameter(Native.TOKEN);
+    // }
+    //
+    // String mid =
+    // request.getParameter(TheiaConstant.RequestParams.Native.MID);
+    // additionalParams.put(TheiaConstant.RequestParams.Native.TXN_TOKEN, new
+    // String[] { txnToken });
+    //
+    // additionalParams.put(DCC_SELECTED_BY_USER, new String[] {
+    // request.getParameter(DCC_SELECTED_BY_USER) });
+    // additionalParams.put(PAYMENT_CALL_DCC, new String[] {
+    // request.getParameter(PAYMENT_CALL_DCC) });
+    //
+    // request.setAttribute(Native.TXN_TOKEN, txnToken);
+    // String oneClickInfo = request.getParameter(ONECLICKINFO);
+    // if (oneClickInfo != null) {
+    // additionalParams.put(Native.ONE_CLICK_INFO, new String[] { oneClickInfo
+    // });
+    // }
+    // String coftConsentInfo = request.getParameter(COFT_CONSENT);
+    // if (coftConsentInfo != null) {
+    // CoftConsent coftConsent = JsonMapper.mapJsonToObject(coftConsentInfo,
+    // CoftConsent.class);
+    // if (coftConsent.getUserConsent() == null
+    // || (coftConsent.getUserConsent() != 1 && coftConsent.getUserConsent() !=
+    // 0)) {
+    // LOGGER.error("Invalid coftConsentInfo : {}", coftConsentInfo);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null,
+    // true);
+    //
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // additionalParams.put(COFT_CONSENT, new String[] { coftConsentInfo });
+    // }
+    // String ecomTokenInfo = request.getParameter(ECOMTOKENINFO);
+    // String cardTokenInfo = request.getParameter(CARDTOKENINFO);
+    //
+    // if (StringUtils.isNotBlank(txnToken)) {
+    // String isCollectAppInvoke = (String) nativeSessionUtil.getField(txnToken,
+    // COLLECT_API_INVOKE);
+    // if (StringUtils.isNotBlank(isCollectAppInvoke) &&
+    // StringUtils.equalsIgnoreCase(isCollectAppInvoke, "true")) {
+    // String paymentMode =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
+    // paymentMode = StringUtils.isNotBlank(paymentMode) ? paymentMode : "";
+    // if (isEnhancedNativeFlow) {
+    // pushNativePaymentEvent(mid, orderId,
+    // "M-WEB Payment by notification App Invoke flow using ".concat(paymentMode));
+    // } else {
+    // pushNativePaymentEvent(mid, orderId,
+    // "APP Payment by notification App Invoke flow using ".concat(paymentMode));
+    // }
+    // }
+    // }
+    //
+    // NativeInitiateRequest nativeInitiateRequest = null;
+    // try {
+    // if
+    // (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE)))
+    // {
+    // nativeInitiateRequest = createNativeInitiateRequestForSsoFLow(request);
+    // additionalParams.put(Native.RISK_EXTENDED_INFO,
+    // new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
+    //
+    // } else {
+    //
+    // nativeInitiateRequest = nativeSessionUtil.validate(txnToken);
+    //
+    // }
+    // } catch (SessionExpiredException see) {
+    // if (isNativeJsonRequest || isEnhancedNativeFlow) {
+    // failureLogUtil.setFailureMsgForDwhPush(ResultCode.SESSION_EXPIRED_EXCEPTION.getResultCodeId(),
+    // ResultCode.SESSION_EXPIRED_EXCEPTION.getResultMsg(), null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.SESSION_EXPIRED_EXCEPTION).isHTMLResponse(
+    // sendHTML).build();
+    // } else {
+    // failureLogUtil.setFailureMsgForDwhPush(null, see.getMessage(), null,
+    // true);
+    // throw see;
+    // }
+    // }
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(Native.RISK_EXTENDED_INFO)))
+    // {
+    //
+    // LOGGER.debug("DATA_ENRICHEMENT : Setting risk_extended_info in additionalParams : {} ",
+    // request.getParameter(Native.RISK_EXTENDED_INFO));
+    // additionalParams.put(Native.RISK_EXTENDED_INFO,
+    // new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
+    // }
+    //
+    // InitiateTransactionRequestBody orderDetail =
+    // nativeInitiateRequest.getInitiateTxnReq().getBody();
+    // addOrderDetails(orderDetail, additionalParams);
+    //
+    // if (orderDetail != null && orderDetail.isAoaSubsOnPgMid()) {
+    // additionalParams.put(AOA_SUBS_ON_PG_MID, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    //
+    // if (orderDetail.isAutoRefund()) {
+    // additionalParams.put(AUTO_REFUND, new String[] { Boolean.TRUE.toString()
+    // });
+    // additionalParams.put(BLOCK_NON_CC_DC_PAYMODES, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    //
+    // validateOneClickPayment(request, orderDetail);
+    // addFlowTypeOnTxnToken(request, txnToken);
+    //
+    // if (orderDetail != null && orderDetail.isOfflineFlow()) {
+    // LOGGER.info("Offline flow for trans :{}", orderDetail.isOfflineFlow());
+    // String extendInfo = request.getParameter(Native.OFFLINE_EXTEND_INFO);
+    // if (extendInfo != null) {
+    // orderDetail.setExtendInfo(getExtendInfo(request, extendInfo));
+    // orderDetail.getExtendInfo().setComments(
+    // JsonMapper.getStringParamFromJson(extendInfo,
+    // TheiaConstant.ExtendedInfoKeys.ADDITIONAL_INFO));
+    // nativeSessionUtil.setOrderDetail(txnToken, orderDetail);
+    // } else {
+    // LOGGER.info("extend info is null for offline mlv flow");
+    // }
+    // }
+    //
+    // Map<String, Object> extraParamsMap = (Map<String, Object>)
+    // theiaTransactionalRedisUtil.get(mid + "#" + orderId);
+    // if (extraParamsMap != null
+    // && (extraParamsMap.get("headAccount") != null ||
+    // extraParamsMap.get("remitterName") != null)
+    // && !isAllowedWrapper(extraParamsMap, MANIPUR_WRAPPER)
+    // && !isAllowedWrapper(extraParamsMap, ASSAM_WRAPPER)) {
+    // additionalParams.put("challanIdNum", new String[] {
+    // workFlowHelper.generateCIN(BSR_CODE) });
+    // }
+    //
+    // // setting sdkType in extendInfo
+    // populateSdkTypeInExtendInfo(request, orderDetail, txnToken);
+    //
+    // if ((StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN)) ||
+    // StringUtils.isNotBlank(request
+    // .getParameter(GUEST_TOKEN))) &&
+    // StringUtils.isBlank(orderDetail.getPaytmSsoToken())) {
+    // // set sso token saved against guestToken in orderdetail
+    // String token = StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN))
+    // ? request
+    // .getParameter(ACCESS_TOKEN) : request.getParameter(GUEST_TOKEN);
+    // String ssoToken = nativeSessionUtil.getSsoToken(token);
+    // orderDetail.setPaytmSsoToken(ssoToken);
+    //
+    // if (StringUtils.isBlank(ssoToken)
+    // && StringUtils.isNotBlank(request.getParameter(ACCESS_TOKEN))
+    // && EPayMethod.EMI.getMethod().equalsIgnoreCase(
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE))) {
+    // CreateAccessTokenServiceRequest accessTokenData =
+    // accessTokenUtils.getAccessTokenDetail(token);
+    // if (accessTokenData != null && accessTokenData.getUserInfo() != null
+    // && StringUtils.isNotBlank(accessTokenData.getUserInfo().getMobile())) {
+    // UserInfo userInfo = orderDetail.getUserInfo();
+    // if (userInfo == null) {
+    // userInfo = new UserInfo();
+    // orderDetail.setUserInfo(userInfo);
+    // }
+    // userInfo.setMobile(accessTokenData.getUserInfo().getMobile());
+    // }
+    // }
+    // // update order detail in cache
+    // nativeSessionUtil.setOrderDetail(txnToken, orderDetail);
+    //
+    // }
+    // additionalParams.put(Native.GUEST_TOKEN, new String[] {
+    // request.getParameter(Native.GUEST_TOKEN) });
+    // additionalParams.put(Native.WORKFLOW, new String[] {
+    // request.getParameter(Native.WORKFLOW) });
+    //
+    // request.setAttribute("orderDetail", orderDetail);
+    // additionalParams.put(PEON_URL, new String[] { orderDetail.getPEON_URL()
+    // });
+    // additionalParams.put(AGG_MID, new String[] { orderDetail.getAggMid() });
+    //
+    // if (orderDetail.getEmiSubventionValidationResponse() != null) {
+    // String paymentMode =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
+    // if (!EPayMethod.EMI.getMethod().equals(paymentMode)) {
+    // LOGGER.error(BizConstant.FailureLogs.PAYMENT_MODE_IS_INVALID_FOR_EMI_SUBVENTION);
+    // if (isNativeJsonRequest(request)) {
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.PAYMENT_MODE_IS_INVALID_FOR_EMI_SUBVENTION, null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
+    // .getResultCodeId(),
+    // RequestValidationException.getException().getMessage(), null, true);
+    // throw RequestValidationException.getException();
+    // }
+    // ValidateRequest subventionvalidateRequest = (ValidateRequest) orderDetail
+    // .getEmiSubventionValidationResponse().get(VALIDATE_EMI_REQUEST);
+    // ValidateResponse subventionValidateResponse = (ValidateResponse)
+    // orderDetail
+    // .getEmiSubventionValidationResponse().get(VALIDATE_EMI_RESPONSE);
+    // String subventionCustomerId = (String)
+    // orderDetail.getEmiSubventionValidationResponse().get(
+    // EMI_SUBVENTION_CUSTOMER_ID);
+    // paymentOptionCardIndexNoPopulated(request, subventionvalidateRequest);
+    // request.setAttribute(VALIDATE_EMI_REQUEST, subventionvalidateRequest);
+    // request.setAttribute(VALIDATE_EMI_RESPONSE, subventionValidateResponse);
+    // request.setAttribute(EMI_SUBVENTION_CUSTOMER_ID, subventionCustomerId);
+    // }
+    //
+    // // EMI Subvention All in one SDK Flow payment call
+    // if
+    // (EPayMethod.EMI.getMethod().equals(request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE))
+    // && null != request.getParameter(EMI_SUBVENTION_INFO)) {
+    // EmiSubventionInfo emiSubventionInfo =
+    // JsonMapper.mapJsonToObject(request.getParameter(EMI_SUBVENTION_INFO),
+    // EmiSubventionInfo.class);
+    //
+    // if (StringUtils.isBlank(emiSubventionInfo.getSubventionPlanId())
+    // || emiSubventionInfo.getFinalTransactionAmount() == null
+    // ||
+    // StringUtils.isBlank(emiSubventionInfo.getFinalTransactionAmount().getValue())
+    // || CollectionUtils.isEmpty(emiSubventionInfo.getItemOfferDetails())) {
+    // LOGGER.error(BizConstant.FailureLogs.EMI_SUBVENTION_INFO_IS_INVALID);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.EMI_SUBVENTION_INFO_IS_INVALID, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // String jsonEmiSubventionInfo =
+    // JsonMapper.mapObjectToJson(emiSubventionInfo);
+    // additionalParams.put(EMI_SUBVENTION_INFO, new String[] {
+    // jsonEmiSubventionInfo });
+    //
+    // }
+    //
+    // if ((orderDetail.getSimplifiedPaymentOffers() != null &&
+    // orderDetail.getPaymentOffersApplied() != null)
+    // || (orderDetail.getSimplifiedPaymentOffers() != null &&
+    // orderDetail.getPaymentOffersAppliedV2() != null)
+    // || (orderDetail.getPaymentOffersApplied() != null &&
+    // orderDetail.getPaymentOffersAppliedV2() != null)) {
+    // if (isNativeJsonRequest(request)) {
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
+    // .getResultCodeId(),
+    // RequestValidationException.getException().getMessage(), null, true);
+    // throw RequestValidationException.getException();
+    // }
+    //
+    // additionalParams.put(AGG_TYPE, new String[] { orderDetail.getAggType()
+    // });
+    // if (orderDetail.getOrderPricingInfo() != null) {
+    // additionalParams.put(ORDER_PRICING_INFO,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getOrderPricingInfo()) });
+    // }
+    // additionalParams.put(OFFLINE_TXN_FLOW, new String[] {
+    // String.valueOf(orderDetail.isOfflineFlow()) });
+    // if (orderDetail.getSimplifiedPaymentOffers() != null) {
+    // additionalParams.put(SIMPLIFIED_PAYMENT_OFFERS,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getSimplifiedPaymentOffers()) });
+    // }
+    //
+    // if (orderDetail.getPaymentOffersApplied() != null) {
+    // additionalParams.put(PROMO_PAYMENT_OFFERS,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getPaymentOffersApplied()) });
+    // }
+    // LOGGER.debug("token data from cache {}: ", orderDetail);
+    //
+    // if (orderDetail.getPaymentOffersAppliedV2() != null) {
+    // additionalParams.put(PROMO_PAYMENT_OFFERS_V2,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getPaymentOffersAppliedV2()) });
+    // }
+    //
+    // if (!StringUtils.equals(mid, orderDetail.getMid())) {
+    // LOGGER.error("mid in token:{} and request:{} are different",
+    // orderDetail.getMid(), mid);
+    // throw RequestValidationException.getException();
+    // }
+    // if (!StringUtils.equals(orderId, orderDetail.getOrderId())) {
+    // LOGGER.error("orderid in token:{} and request:{} are different",
+    // orderDetail.getOrderId(), orderId);
+    //
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // if (ERequestType.NATIVE_MF.getType().equals(orderDetail.getRequestType())
+    // || (orderDetail.getLinkDetailsData() != null &&
+    // ERequestType.NATIVE_MF.getType().equals(
+    // orderDetail.getLinkDetailsData().getSubRequestType())))
+    // EventUtils.pushTheiaEvents(EventNameEnum.PAYMENT_FOR_NATIVE_MF, new
+    // ImmutablePair<>("REQUEST_TYPE",
+    // ERequestType.NATIVE_MF.getType()));
+    //
+    // String aggMid =
+    // request.getParameter(TheiaConstant.RequestParams.Native.AGG_MID);
+    // if (StringUtils.isNotBlank(aggMid) &&
+    // !StringUtils.equals(orderDetail.getAggMid(), aggMid)) {
+    // LOGGER.error(BizConstant.FailureLogs.AGG_MID_IN_TOKEN_AND_REQUEST_ARE_DIFFERENT);
+    // failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
+    // .getResultCodeId(),
+    // BizConstant.FailureLogs.AGG_MID_IN_TOKEN_AND_REQUEST_ARE_DIFFERENT, null,
+    // true);
+    // throw RequestValidationException.getException();
+    // }
+    //
+    // if (orderDetail.getExtendInfo() != null &&
+    // orderDetail.getExtendInfo().getSubsLinkInfo() != null
+    // &&
+    // StringUtils.isNotBlank(orderDetail.getExtendInfo().getSubsLinkInfo().getSubsLinkId()))
+    // {
+    // additionalParams.put(SUBS_LINK_ID,
+    // new String[] {
+    // String.valueOf(orderDetail.getExtendInfo().getSubsLinkInfo().getSubsLinkId())
+    // });
+    // }
+    //
+    // if (!aoaUtils.isAOAMerchant(mid) && isNativeJsonRequest
+    // && !TokenType.SSO.getType().equals(request.getParameter(TOKEN_TYPE))) {
+    // boolean isNativeJsonSupported =
+    // checkIfMerchantHasPreference((orderDetail.isOfflineFlow() && StringUtils
+    // .isNotEmpty(orderDetail.getAggMid())) ? orderDetail.getAggMid() : mid);
+    // if (!isNativeJsonSupported
+    // && !checkIfMerchantHasCheckoutJSSupport(
+    // (orderDetail.isOfflineFlow() &&
+    // StringUtils.isNotEmpty(orderDetail.getAggMid())) ?
+    // orderDetail.getAggMid()
+    // : mid, request.getParameter(Native.WORKFLOW))) {
+    // LOGGER.error("Merchant does not have preference nativeJsonRequest and not checkout flow/checkoutjs blocked, failing txn!");
+    // failureLogUtil
+    // .setFailureMsgForDwhPush(
+    // RequestValidationException.getException().getResultCode().getResultCodeId(),
+    // "Merchant does not have preference nativeJsonRequest and not checkout flow/checkoutjs blocked, failing txn!",
+    // null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.FAILED).isRetryAllowed(false).build();
+    // }
+    // }
+    // // Setting splitSettlementInfo
+    // if (orderDetail.getSplitSettlementInfoData() != null) {
+    // additionalParams
+    // .put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ExtendedInfoKeys.MERCHANT_SPLIT_SETTLEMENT_INFO,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getSplitSettlementInfoData()) });
+    // }
+    // // Setting link details
+    // if (orderDetail.getLinkDetailsData() != null) {
+    // additionalParams.put(
+    // com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.Native.SUB_REQUEST_TYPE,
+    // new String[] { orderDetail.getLinkDetailsData().getSubRequestType() });
+    // additionalParams.put(
+    // com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.Native.LINK_DETAILS,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getLinkDetailsData()) });
+    // if (orderDetail.getLinkDetailsData().getEdcEmiFields() != null) {
+    // additionalParams.put(IS_EDC_LINK_TXN, new String[] { TRUE });
+    // }
+    // }
+    // /*
+    // * We are using this to send it to promoService
+    // */
+    // String merchantRequestedChannelId =
+    // request.getParameter(Native.CHANNEL_ID);
+    // additionalParams.put("merchantRequestedChannelId", new String[] {
+    // merchantRequestedChannelId });
+    //
+    // String channelID = getChannelId(request);
+    // additionalParams.put(CHANNEL_ID, new String[] { channelID });
+    //
+    // NativeCashierInfoResponse cashierInfoResponse =
+    // nativeSessionUtil.getCashierInfoResponse(txnToken);
+    // Map<String, String> nativeSessionUtilExtendInfo =
+    // nativeSessionUtil.getExtendInfo(txnToken);
+    // if (MapUtils.isNotEmpty(nativeSessionUtilExtendInfo)) {
+    // additionalParams.put(PRODUCT_CODE, new String[] {
+    // nativeSessionUtilExtendInfo.get(PRODUCT_CODE) });
+    // }
+    // if (MapUtils.isNotEmpty(nativeSessionUtilExtendInfo)
+    // && nativeSessionUtilExtendInfo.get(ADD_MONEY_DESTINATION) != null) {
+    // additionalParams.put(ADD_MONEY_DESTINATION,
+    // new String[] {
+    // nativeSessionUtilExtendInfo.get(ADD_MONEY_DESTINATION).toString() });
+    // }
+    // /*
+    // * For Nativeplus and enhanced Flow, userConsentFlag is extracted from
+    // * extendInfo and added at first level
+    // */
+    // if (Boolean.valueOf(request.getParameter(USER_INVESTMENT_CONSENT_FLAG)))
+    // {
+    // additionalParams.put(USER_INVESTMENT_CONSENT_FLAG,
+    // new String[] { request.getParameter(USER_INVESTMENT_CONSENT_FLAG) });
+    // }
+    // /*
+    // * For Native Flow, a sub param map is not generated in controller hence
+    // * fetching directly from request body ExtendInfo field
+    // */
+    // if (request.getParameter(EXTENDINFO) != null) {
+    // try {
+    // Map<String, String> extendInfo =
+    // JsonMapper.readValue(request.getParameter(EXTENDINFO),
+    // new TypeReference<Map<String, String>>() {
+    // });
+    // if (extendInfo != null && !extendInfo.isEmpty()
+    // && Boolean.valueOf(extendInfo.get(USER_INVESTMENT_CONSENT_FLAG))) {
+    // additionalParams.put(USER_INVESTMENT_CONSENT_FLAG, new String[] { TRUE
+    // });
+    // }
+    // } catch (IOException e) {
+    // LOGGER.error("Error in fetching field from extend_info {}", e);
+    // }
+    // }
+    //
+    // if (cashierInfoResponse == null) {
+    // String upiAccRefId =
+    // request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID);
+    // if (StringUtils.isNotBlank(upiAccRefId)) {
+    // cashierInfoResponse = callFetchPayOptions(txnToken, channelID,
+    // TheiaConstant.RequestHeaders.Version_V2,
+    // orderDetail);
+    // validateAccRefIdInFetchPayV2(cashierInfoResponse, upiAccRefId);
+    // } else {
+    // cashierInfoResponse = callFetchPayOptions(txnToken, channelID,
+    // TheiaConstant.RequestHeaders.Version_V1,
+    // orderDetail);
+    // }
+    // if (orderDetail != null &&
+    // TxnType.ESCROW.equals(orderDetail.getTxnType())) {
+    // additionalParams.put(PRODUCT_CODE,
+    // new String[] {
+    // ProductCodes.StandardAcquiringEscrowDelayedSettlement.getId() });
+    // }
+    // }
+    // if (cashierInfoResponse.getBody().isOnTheFlyKYCRequired()) {
+    // additionalParams.put("isOnTheFlyKYCRequired", new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    //
+    // if (cashierInfoResponse.getBody().getMerchantDetails() != null
+    // &&
+    // StringUtils.isNotBlank(cashierInfoResponse.getBody().getMerchantDetails().getMerchantDisplayName()))
+    // {
+    // additionalParams.put(MERCHANT_DISPLAY_NAME, new String[] {
+    // cashierInfoResponse.getBody()
+    // .getMerchantDetails().getMerchantDisplayName() });
+    // }
+    //
+    // // Validate for Fee on addMoney, this has been handled for native+ and
+    // // native
+    // // Risk reject in case of scwpay-Enhance and Third party Topups
+    // validateFeeForAddMoney(request, nativeInitiateRequest, additionalParams,
+    // cashierInfoResponse, txnToken);
+    //
+    // CCBillPayment ccBillPayment = orderDetail.getCcBillPayment();
+    //
+    // if (ccBillPayment != null &&
+    // StringUtils.isNotBlank(ccBillPayment.getCcBillNo())) {
+    // LOGGER.info("CC bill payment request received");
+    // additionalParams.put("ccBillPaymentRequest", new String[] {
+    // Boolean.TRUE.toString() });
+    // additionalParams.put("CC_BILL_NO", new String[] {
+    // ccBillPayment.getCcBillNo() });
+    // }
+    //
+    // if (orderDetail.isNativeAddMoney()) {
+    // LOGGER.info("Native AddMoney request received");
+    // additionalParams.put("isNativeAddMoney", new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    // if
+    // (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))
+    // &&
+    // (EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow())
+    // || EPayMode.HYBRID
+    // .equals(cashierInfoResponse.getBody().getPaymentFlow()))) {
+    // WalletInfo walletInfo =
+    // theiaSessionDataServiceAdapterNative.getWalletInfoFromSession(request);
+    // Double txnAmount =
+    // Double.parseDouble(orderDetail.getTxnAmount().getValue());
+    // if (walletInfo != null && walletInfo.getWalletBalance() != null
+    // && txnAmount <= walletInfo.getWalletBalance()) {
+    // cashierInfoResponse.getBody().setPaymentFlow(EPayMode.NONE);
+    // }
+    // }
+    // boolean isEligibleForUpiToAddNPay = eligibleForUpiToAddNPay(request, mid,
+    // cashierInfoResponse);
+    // EPayMode payMode = cashierInfoResponse.getBody().getPaymentFlow();
+    // // As part of PGP-33786, the transaction has been converted to ADDANDPAY
+    // if (isEligibleForUpiToAddNPay) {
+    // EventUtils.pushTheiaEvents(
+    // EventNameEnum.ONLINE_NATIVE_PAYMENT_REQUEST,
+    // new
+    // ImmutablePair<>("Converting UPI transaction to ADDANDPAY for paymentMode",
+    // request
+    // .getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE)));
+    // payMode = EPayMode.ADDANDPAY;
+    // }
+    //
+    // if (payMode.equals(EPayMode.HYBRID) ||
+    // payMode.equals(EPayMode.ADDANDPAY)) {
+    // LOGGER.info("Setting wallet balance from LitePayView Response");
+    // String walletBalance =
+    // getWalletBalanceFromLitePayViewResponse(cashierInfoResponse);
+    // additionalParams.put("WALLET_AMOUNT", new String[] { walletBalance });
+    // }
+    // additionalParams.put(PAYMENT_FLOW_EXPECTED, new String[] {
+    // payMode.getValue() });
+    // additionalParams.put(TWO_FA_CONFIG, new String[] {
+    // request.getParameter(TWO_FA_CONFIG) });
+    // additionalParams.put(SIM_SUBSCRIPTION_ID, new String[] {
+    // request.getParameter(SIM_SUBSCRIPTION_ID) });
+    //
+    // Map<String, Object> litePayViewCacheInfo =
+    // nativeSessionUtil.getLitepayviewCacheInfo(txnToken);
+    // if (litePayViewCacheInfo != null &&
+    // litePayViewCacheInfo.containsKey("pwpEnabled")
+    // && StringUtils.equals(Boolean.TRUE.toString(), (String)
+    // litePayViewCacheInfo.get("pwpEnabled"))) {
+    // LOGGER.info("check value for pwp info");
+    // String pwpCategory =
+    // payviewConsultServiceHelper.getCategoryForPWPMerchant(mid);
+    // additionalParams.put("pwpCategory", new String[] { pwpCategory });
+    // }
+    //
+    // // Check for KYC in Enhanced Flow with ADD_AND_PAY
+    // if (isEnhancedNativeFlow && payMode.equals(EPayMode.ADDANDPAY)) {
+    //
+    // // Fail the transaction if kyc is still not done. Based on the flag
+    // // isOnTheFlyKYCRequired is true.
+    // if (cashierInfoResponse.getBody().isOnTheFlyKYCRequired()) {
+    // UserDetailsBiz userDetailsBiz =
+    // nativeSessionUtil.getUserDetails(txnToken);
+    // if (userDetailsBiz != null) {
+    // String userKycKey = "KYC_" + userDetailsBiz.getUserId();
+    // boolean hasCustomerDoneKYCRecently = nativeSessionUtil.getKey(userKycKey)
+    // != null ? true : false;
+    //
+    // boolean nativeKYCValidateFlag =
+    // Boolean.valueOf(ConfigurationUtil.getProperty(
+    // TheiaConstant.RequestParams.KYC_NATIVE_VALIDATE_FLAG, "false"));
+    //
+    // boolean isAllowedForAllCustomers =
+    // Boolean.valueOf(com.paytm.pgplus.common.config.ConfigurationUtil
+    // .getProperty(TheiaConstant.RequestParams.KYC_ALLOWED_ALL_FLAG, "false"));
+    //
+    // List<String> allowedCustIds = Collections.emptyList();
+    //
+    // if
+    // (StringUtils.isNotBlank(com.paytm.pgplus.common.config.ConfigurationUtil
+    // .getProperty(TheiaConstant.RequestParams.KYC_ALLOWED_LIST))) {
+    // allowedCustIds = Arrays.asList(ConfigurationUtil.getProperty(
+    // TheiaConstant.RequestParams.KYC_ALLOWED_LIST).split(","));
+    // }
+    // // Set the flag as true
+    // if (!hasCustomerDoneKYCRecently && nativeKYCValidateFlag
+    // && (isAllowedForAllCustomers ||
+    // allowedCustIds.contains(userDetailsBiz.getUserId()))) {
+    // LOGGER.error(BizConstant.FailureLogs.FAILING_ADDNPAY_REQ_WITHOUT_VALID_KYC_USER);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.FAILING_ADDNPAY_REQ_WITHOUT_VALID_KYC_USER, null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(ResultCode.INVALID_KYC.getResultMsg()).build();
+    // }
+    // }
+    // }
+    // }
+    //
+    // // Blocking emiSubvention and promo for pwp merchant
+    // if ((orderDetail.getEmiSubventionToken() != null ||
+    // orderDetail.getPaymentOffersApplied() != null || orderDetail
+    // .getPaymentOffersAppliedV2() != null) && isPWPMerchant(mid)) {
+    // LOGGER.error(BizConstant.FailureLogs.EMI_SUBVENTION_OR_PROMO_IS_NOT_APPLIED);
+    // if (isNativeJsonRequest(request)) {
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
+    // .getResultCodeId(),
+    // BizConstant.FailureLogs.EMI_SUBVENTION_OR_PROMO_IS_NOT_APPLIED, null,
+    // true);
+    // throw RequestValidationException.getException();
+    // }
+    //
+    // setNativeTxnInProcessFlagInCache(txnToken);
+    // setMidOrderIdInRequestAttribute(request, mid, orderId);
+    // additionalParams.put(TXN_TOKEN, new String[] { txnToken });
+    // String paymentMode =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_MODE);
+    // additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
+    // EventUtils.pushTheiaEvents(EventNameEnum.REQUEST_WITH_PAYMENT_MODE, new
+    // ImmutablePair<>("PAYMENT_MODE",
+    // paymentMode));
+    //
+    // // for ZestMoney. Converting ZestMoney from emi channel to nb channel
+    // if (request.getParameter(Native.CHANNEL_CODE) != null &&
+    // request.getParameter(Native.CHANNEL_CODE).equals(ZEST)) {
+    // paymentMode = EPayMethod.NET_BANKING.getMethod();
+    // additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
+    // }
+    //
+    // if (EPayMethod.COD.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = EPayMethod.MP_COD.getMethod();
+    // }
+    //
+    // String paymentDetails = null;
+    //
+    // additionalParams.put(PRE_AUTH_EXPIRY_DATE, new String[] {
+    // orderDetail.getPreAuthExpiryDate() });
+    // additionalParams.put(
+    // PRE_AUTH,
+    // new String[] {
+    // String.valueOf(TxnType.AUTH.equals(orderDetail.getTxnType())
+    // || TxnType.ESCROW.equals(orderDetail.getTxnType())) });
+    //
+    // if (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode)
+    // || EPayMethod.CREDIT_CARD.getMethod().equalsIgnoreCase(paymentMode)
+    // || EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
+    // // TODO to be removed
+    // EXT_LOGGER.customInfo("encCardInfo: {}, cardInfo: {}",
+    // request.getParameter(Native.ENCRYPTED_CARD_INFO),
+    // request.getParameter(Native.CARD_INFO));
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(Native.ENCRYPTED_CARD_INFO))
+    // && StringUtils.isNotBlank(request.getParameter(Native.CARD_INFO))) {
+    // LOGGER.error(BizConstant.FailureLogs.RECEIVED_CARD_INFO_IN_BOTH);
+    // failureLogUtil.setFailureMsgForDwhPush(RequestValidationException.getException().getResultCode()
+    // .getResultCodeId(), BizConstant.FailureLogs.RECEIVED_CARD_INFO_IN_BOTH,
+    // null, true);
+    // throw RequestValidationException.getException();
+    // } else if
+    // (StringUtils.isNotBlank(request.getParameter(Native.ENCRYPTED_CARD_INFO)))
+    // {
+    // additionalParams
+    // .put(PAYMENT_DETAILS, new String[] {
+    // request.getParameter(Native.ENCRYPTED_CARD_INFO) });
+    // additionalParams.put(IS_ENCRYPTED_CARD_DETAIL, new String[] {
+    // IS_ENCRYPTED_CARD_DETAIL_STATUS });
+    // } else if (cardTokenInfo != null) {
+    // // Added this to supported encryped card info for payments
+    // String cardInfo = request.getParameter(Native.CARD_INFO);
+    // if (merchantPreferenceService.isEncryptedCardMerchant(mid) &&
+    // isEncryptedCardDetails(cardInfo)) {
+    // cardInfo = getDecryptedCardInfo(cardInfo.trim());
+    // }
+    // String[] cardDetails = cardInfo.split(Pattern.quote("|"), -1);
+    // if (cardDetails.length != 4 && cardDetails[2].trim().length() == 0) {
+    // LOGGER.error("Invalid cardDetails length or CVV is missing: {}",
+    // cardDetails.length);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_CARD_DETAILS_LENGTH_OR_CVV_MISSING, null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // String requiredCardDetails = parseCVV(cardDetails[2]);
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails
+    // });
+    // additionalParams.put(CARDTOKENINFO, new String[] { cardTokenInfo });
+    // additionalParams.put(COFTTOKEN_TXN, new String[] {
+    // Boolean.TRUE.toString() });
+    // } else if (ecomTokenInfo != null) {
+    // EcomTokenInfo ecomTokenInfoObj =
+    // JsonMapper.mapJsonToObject(ecomTokenInfo, EcomTokenInfo.class);
+    //
+    // if (StringUtils.isBlank(ecomTokenInfoObj.getEcomToken())
+    // || StringUtils.isBlank(ecomTokenInfoObj.getExpiryMonth())
+    // || StringUtils.isBlank(ecomTokenInfoObj.getExpiryYear())
+    // || StringUtils.isBlank(ecomTokenInfoObj.getAuthenticationValue())) {
+    // LOGGER.error("Invalid ecomTokenInfo : {}", ecomTokenInfoObj);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_ECOM_TOKEN_INFO, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // String requiredCardDetails = null;
+    // requiredCardDetails = JsonMapper.mapObjectToJson(ecomTokenInfoObj);
+    //
+    // /*
+    // * update paymode as the bin cardtype, this is for ecomToken,
+    // * not savedCardId
+    // */
+    // if ((EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode) ||
+    // EPayMethod.CREDIT_CARD
+    // .getMethod().equalsIgnoreCase(paymentMode))
+    // && ecomTokenInfoObj.getEcomToken().trim().length() != 0) {
+    // String cardType =
+    // getPaymodeForEcomToken(ecomTokenInfoObj.getEcomToken().trim());
+    // if (StringUtils.isNotBlank(cardType)) {
+    // EPayMethod payMeth = EPayMethod.getPayMethodByMethod(cardType);
+    // if (payMeth != null) {
+    // paymentMode = payMeth.getMethod();
+    // }
+    // }
+    // }
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails
+    // });
+    // additionalParams.put(ECOMTOKEN_TXN, new String[] {
+    // Boolean.TRUE.toString() });
+    // } else {
+    // String cardInfo = request.getParameter(Native.CARD_INFO);
+    //
+    // // Below handling for Mutual Fund lumpsum payment with saved
+    // // subscription
+    // if (StringUtils.isBlank(cardInfo)
+    // && ERequestType.NATIVE_MF.getType().equals(orderDetail.getRequestType()))
+    // {
+    // String subsId =
+    // StringUtils.isNotBlank(request.getParameter(SUBSCRIPTION_ID)) ? request
+    // .getParameter(SUBSCRIPTION_ID) : request.getParameter(SUBS_ID);
+    // cardInfo = subsId.concat("|||");
+    // additionalParams.put(IS_SUBS_MOTO_PAYMENT, new String[] { TRUE });
+    // }
+    //
+    // /* full card Number encrypted with etm jar PGP-32407 */
+    // if (merchantPreferenceService.isEncryptedCardMerchant(mid) &&
+    // isEncryptedCardDetails(cardInfo)) {
+    // cardInfo = getDecryptedCardInfo(cardInfo.trim());
+    // }
+    //
+    // String[] cardDetails = cardInfo.split(Pattern.quote("|"), -1);
+    // String requiredCardDetails = "";
+    // if (cardDetails.length != 4) {
+    // LOGGER.error("Invalid cardDetails length: {}", cardDetails.length);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_CARD_DETAILS_LENGTH, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // String cvv = parseCVV(cardDetails[2]);
+    // cardDetails[2] = cvv;
+    // if (cardDetails[0].trim().length() != 0) {
+    // if (isVisaSingleClickPayment(request)) {
+    // requiredCardDetails = cardDetails[0].trim() + MAESTRO_CVV;
+    // } else if (cardDetails[2].trim().length() > 0) {
+    // requiredCardDetails = cardDetails[0].trim() + "|" +
+    // cardDetails[2].trim();
+    // } else if (Boolean.valueOf(request.getParameter(IDEBIT_OPTION))) {
+    // requiredCardDetails = cardDetails[0].trim() + "|" +
+    // cardDetails[2].trim();
+    // } else {
+    // requiredCardDetails = cardDetails[0].trim() + MAESTRO_CVV;
+    // }
+    // if (cardDetails[0].trim().length() > 15 && cardDetails[0].trim().length()
+    // < 45) {
+    // additionalParams.put(COFTTOKEN_TXN, new String[] {
+    // Boolean.TRUE.toString() });
+    // }
+    // } else if (cardDetails[1].trim().length() != 0
+    // && (isMaestroCardScheme(cardDetails[1].trim()) ||
+    // isBajajCardScheme(cardDetails[1].trim()) ||
+    // isVisaSingleClickPayment(request))) {
+    // requiredCardDetails = cardDetails[1].trim() + MAESTRO_CVV +
+    // getExpiry(request, cardDetails);
+    // } else if (cardDetails[1].trim().length() != 0 &&
+    // isBajajFnScheme(cardDetails[1].trim())) {
+    // requiredCardDetails = cardDetails[1].trim() + BAJAJFN_CVV + "|" +
+    // cardDetails[3].trim();
+    // } else {
+    // requiredCardDetails = cardDetails[1].trim() + "|" + cardDetails[2].trim()
+    // + "|"
+    // + cardDetails[3].trim();
+    // }
+    // if (cardDetails[1].trim().length() != 0) {
+    // paymentDetails = requiredCardDetails;
+    // }
+    //
+    // /*
+    // * update paymode as the bin cardtype, this is for cardnumbers,
+    // * not savedCardId
+    // */
+    // if ((EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode) ||
+    // EPayMethod.CREDIT_CARD
+    // .getMethod().equalsIgnoreCase(paymentMode)) &&
+    // cardDetails[1].trim().length() != 0) {
+    // String cardType = getPaymodeForCardBin(requiredCardDetails);
+    // if (StringUtils.isNotBlank(cardType)) {
+    // EPayMethod payMeth = EPayMethod.getPayMethodByMethod(cardType);
+    // if (payMeth != null) {
+    // paymentMode = payMeth.getMethod();
+    // }
+    // }
+    // }
+    // checkIfIssuerBlockOnMid(sendHTML, mid, orderDetail, requiredCardDetails,
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_FLOW));
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { requiredCardDetails
+    // });
+    // }
+    //
+    // validateSubscriptionPayMethods(request, additionalParams, orderDetail,
+    // sendHTML);
+    // }
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.AUTH_MODE))
+    // && (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode))) {
+    // String authMode = (String)
+    // request.getParameter(TheiaConstant.RequestParams.Native.AUTH_MODE);
+    // if (AuthMode.OTP.getType().equals(authMode)) {
+    // additionalParams.put(IDEBIT_OPTION, new String[] { "false" });
+    // } else if (AuthMode.PIN.getType().equals(authMode)) {
+    // additionalParams.put(IDEBIT_OPTION, new String[] { "true" });
+    // } else {
+    // LOGGER.error("Invalid authMode: {}", authMode);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_AUTH_MODE, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // }
+    //
+    // String paymentFlow =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYMENT_FLOW);
+    // if (StringUtils.isBlank(paymentFlow)) {
+    // paymentFlow = EPayMode.NONE.getValue();
+    // }
+    //
+    // if (!StringUtils.isBlank(paymentFlow)) {
+    // EPayMode paymentFlowExpected =
+    // cashierInfoResponse.getBody().getPaymentFlow();
+    // if (isEligibleForUpiToAddNPay) {
+    // paymentFlow = EPayMode.ADDANDPAY.getValue();
+    // paymentFlowExpected = EPayMode.ADDANDPAY;
+    // }
+    // if ((AOA_WORKFLOW).equals(request.getParameter(Native.WORKFLOW))) {
+    // paymentFlowExpected = EPayMode.valueOf(paymentFlow);
+    // }
+    // if (!isPaymentFlowEnable(paymentFlow, paymentFlowExpected)) {
+    // LOGGER.error("Invalid paymentFlow: {} but expected: {}", paymentFlow,
+    // paymentFlowExpected);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_PAYMENT_FLOW, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    //
+    // }
+    // if (!isPaymentFlowEnableForPayMethod(paymentFlow, paymentMode)) {
+    // LOGGER.error("Invalid paymentFlow: {} payment flow not supported for payment mode: {}",
+    // paymentFlow,
+    // paymentMode);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // "Invalid paymentFlow, payment flow not supported for payment mode", null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)
+    // && PaymentFlow.HYBRID.getType().equals(paymentFlow)) {
+    // String bankCode =
+    // StringUtils.substringBefore(request.getParameter("planId"), "|");
+    // if (CashierConstant.BAJAJFN.equals(bankCode)) {
+    // LOGGER.error(BizConstant.FailureLogs.INVALID_PAYMODE_BAJAJFN_EMI);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_PAYMODE_BAJAJFN_EMI, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // }
+    //
+    // if
+    // (PaymentFlow.ADD_AND_PAY.equals(PaymentFlow.paymentFlowByEPayMode(EPayMode.valueOf(paymentFlow))))
+    // {
+    // additionalParams.put(ADD_MONEY, new String[] { "1" });
+    // } else if (PaymentFlow.HYBRID.getType().equals(paymentFlow)) {
+    // additionalParams.put(ADD_MONEY, new String[] { "0" });
+    // }
+    // }
+    //
+    // if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
+    // boolean paymentAllowed = isPaymentAllowedForEMIWithTxnAmt(request,
+    // cashierInfoResponse,
+    // orderDetail.getTxnAmount(), request.getParameter(Native.PLAN_ID),
+    // request.getParameter(Native.EMI_TYPE), isEnhancedNativeFlow,
+    // paymentDetails);
+    // additionalParams.put(Native.PAYMENT_MODE, new String[] { paymentMode });
+    // additionalParams.put(Native.PLAN_ID, new String[] {
+    // request.getParameter(Native.PLAN_ID) });
+    // if (!paymentAllowed) {
+    // LOGGER.error("Invalid EmiTxnAmnt, paymentMode: {}", paymentMode);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // "Invalid EmiTxnAmnt", null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // // validate emiId passed in inititate Transaction
+    // boolean isValidPlanId = isValidEmiPlanEnteredInNative(orderDetail,
+    // request.getParameter(Native.PLAN_ID));
+    // if (!isValidPlanId) {
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null,
+    // true);
+    //
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // }
+    // if (EPayMethod.PPBL.getOldName().equalsIgnoreCase(paymentMode)) {
+    // FetchAccountBalanceResponse fetchAccountBalanceResponse = null;
+    // if
+    // ((TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))))
+    // {
+    // String midSSOToken =
+    // nativeSessionUtil.createTokenForMidSSOFlow(request.getParameter(SSO_TOKEN),
+    // mid);
+    // fetchAccountBalanceResponse =
+    // nativeSessionUtil.getAccountBalanceResponseFromCache(midSSOToken);
+    // } else {
+    // fetchAccountBalanceResponse =
+    // nativeSessionUtil.getAccountBalanceResponseFromCache(request
+    // .getParameter(Native.TXN_TOKEN));
+    // }
+    // if (fetchAccountBalanceResponse != null
+    // && StringUtils.isNotBlank(fetchAccountBalanceResponse.getAccountType()))
+    // {
+    // additionalParams.put(PPBL_ACCOUNT_TYPE, new String[] {
+    // fetchAccountBalanceResponse.getAccountType() });
+    // }
+    // }
+    //
+    // if (EPayMethod.BALANCE.getMethod().equals(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.PPI.value;
+    // } else if (EPayMethod.PPBL.getOldName().equals(paymentMode)) {
+    // additionalParams.put(BANK_CODE, new String[] { paymentMode });
+    // if
+    // (StringUtils.isBlank(request.getParameter(TheiaConstant.RequestParams.Native.MPIN)))
+    // {
+    // LOGGER.error(BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_PPBL);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_PPBL, null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // additionalParams.put(PAYMENT_DETAILS,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.MPIN) });
+    // paymentMode = PaymentTypeIdEnum.NB.value;
+    // additionalParams.put(ACCOUNT_NUMBER,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER)
+    // });
+    // } else if
+    // (EPayMethod.NET_BANKING.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.NB.value;
+    // additionalParams.put(ACCOUNT_NUMBER,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER)
+    // });
+    //
+    // String bankCode =
+    // request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE);
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { bankCode });
+    // additionalParams.put(BANK_CODE, new String[] { bankCode });
+    //
+    // PayOption merchantPayOption =
+    // cashierInfoResponse.getBody().getMerchantPayOption();
+    //
+    // PayMethod nbPayMethod = merchantPayOption.getPayMethods().stream()
+    // .filter(payMethod ->
+    // EPayMethod.NET_BANKING.getMethod().equals(payMethod.getPayMethod())).findAny()
+    // .orElse(null);
+    //
+    // if (StringUtils.isNotBlank(bankCode) && nbPayMethod != null
+    // && CollectionUtils.isNotEmpty(nbPayMethod.getPayChannelOptions())) {
+    // for (PayChannelBase payChannelBase : nbPayMethod.getPayChannelOptions())
+    // {
+    // Bank bank = (Bank) payChannelBase;
+    // if (bankCode.equalsIgnoreCase(bank.getInstId())) {
+    // additionalParams.put(BANK_NAME, new String[] { bank.getInstName() });
+    // break;
+    // }
+    // }
+    // }
+    // verifyEnabledBankForNetBanking(nbPayMethod, bankCode, sendHTML);
+    //
+    // } else if (EPayMethod.UPI.getMethod().equalsIgnoreCase(paymentMode)
+    // || PaymentTypeIdEnum.UPI_LITE.value.equals(paymentMode)) {
+    // if (!PaymentTypeIdEnum.UPI_LITE.value.equals(paymentMode)
+    // && ((StringUtils.isNotBlank(request.getParameter(CHANNEL_CODE)) &&
+    // request.getParameter(
+    // CHANNEL_CODE).equals("UPI")) ||
+    // StringUtils.isBlank(request.getParameter(Native.MPIN)))) {
+    //
+    // Double txnAmount =
+    // Double.parseDouble(orderDetail.getTxnAmount().getValue());
+    // Double upiCollectLimitUnverified =
+    // Double.parseDouble(com.paytm.pgplus.theia.utils.ConfigurationUtil
+    // .getProperty(UPI_COLLECT_LIMIT_UNVERIFIED, "2000"));
+    // boolean blockPaymentForUPICollect = txnAmount > upiCollectLimitUnverified
+    // && !merchantPreferenceService.isUpiCollectWhitelisted(mid, true);
+    // if (blockPaymentForUPICollect) {
+    // LOGGER.error("Merchant is not verified and UPI collect txn is > {} : {}",
+    // upiCollectLimitUnverified, orderDetail);
+    // failureLogUtil.setFailureMsgForDwhPush(RISK_REJECT.getCode(),
+    // "Merchant is not verified", null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(RISK_REJECT).isHTMLResponse(sendHTML)
+    // .isRetryAllowed(false).isRedirectEnhanceFlow(true).setRetryMsg(RISK_REJECT.getMessage())
+    // .build();
+    // }
+    // }
+    //
+    // validationForCCOnUPI(request, sendHTML);
+    // paymentMode = EPayMethod.UPI.getMethod();
+    //
+    // verifyEnabledUpiPsp(orderDetail, request, sendHTML);
+    // if
+    // (!EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow())
+    // && !validateUpiChannels(request, cashierInfoResponse, paymentMode, mid))
+    // {
+    // // throw exception
+    // failureLogUtil.setFailureMsgForDwhPush(INVALID_PAYMENTMODE.getCode(),
+    // INVALID_PAYMENTMODE.getMessage(),
+    // null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(INVALID_PAYMENTMODE).isHTMLResponse(sendHTML)
+    // .isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(INVALID_PAYMENTMODE.getMessage()).build();
+    // }
+    //
+    // if (ff4jUtils.isFeatureEnabledOnMid(mid,
+    // FEATURE_ENABLE_UPI_COLLECT_ON_ADDNPAY, false)) {
+    // verifyEnableUpiCollectChannel(cashierInfoResponse, orderDetail, request,
+    // sendHTML);
+    // }
+    //
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID)))
+    // {
+    // String vpa =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT);
+    // if (StringUtils.isEmpty(vpa)) {
+    // LOGGER.info("Getting vpa from cache");
+    // vpa = getVPAForAccRefId(cashierInfoResponse,
+    // cashierInfoResponse.getBody().getPaymentFlow());
+    // }
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { vpa });
+    // } else {
+    // additionalParams.put(PAYMENT_DETAILS,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT)
+    // });
+    // }
+    // additionalParams.put(ACCOUNT_NUMBER,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER)
+    // });
+    // additionalParams.put(SEQUENCE_NO,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.SEQ_NUMBER) });
+    // additionalParams.put(BANK_NAME,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.BANK_NAME) });
+    // additionalParams.put(CREDIT_BLOCK,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.CREDIT_BLOCK) });
+    // additionalParams.put(MPIN, new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.MPIN) });
+    // additionalParams.put(DEVICE_ID,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID) });
+    // additionalParams.put(UPI_ACC_REF_ID,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID)
+    // });
+    // additionalParams.put(ORIGIN_CHANNEL, new String[] {
+    // request.getParameter(ORIGIN_CHANNEL) });
+    // additionalParams.put(BizConstant.UPILITE_REQUEST_DATA,
+    // new String[] { request.getParameter(BizConstant.UPILITE_REQUEST_DATA) });
+    //
+    // if (StringUtils.isNotBlank(request.getParameter(MERCHANT_VPA))) {
+    // additionalParams.put(MERCHANT_VPA, new String[] {
+    // request.getParameter(MERCHANT_VPA) });
+    // }
+    // paymentMode = PaymentTypeIdEnum.UPI.value;
+    //
+    // } else if
+    // (EPayMethod.UPI_INTENT.getMethod().equalsIgnoreCase(paymentMode)) {
+    // LOGGER.info("Payment Request received for UPI Intent,Setting Parameters for the same");
+    // if
+    // (!EPayMode.ADDANDPAY.equals(cashierInfoResponse.getBody().getPaymentFlow())
+    // && !validateUpiChannels(request, cashierInfoResponse, paymentMode, mid))
+    // {
+    // // throw exception
+    // failureLogUtil.setFailureMsgForDwhPush(INVALID_PAYMENTMODE.getCode(),
+    // INVALID_PAYMENTMODE.getMessage(),
+    // null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(INVALID_PAYMENTMODE).isHTMLResponse(sendHTML)
+    // .isRetryAllowed(false).isRedirectEnhanceFlow(true)
+    // .setRetryMsg(INVALID_PAYMENTMODE.getMessage()).build();
+    // }
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID)))
+    // {
+    // String vpa =
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT);
+    // if (StringUtils.isEmpty(vpa)) {
+    // LOGGER.info("Getting vpa from cache");
+    // vpa = getVPAForAccRefId(cashierInfoResponse,
+    // cashierInfoResponse.getBody().getPaymentFlow());
+    // }
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { vpa });
+    // } else {
+    // additionalParams.put(PAYMENT_DETAILS,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.PAYER_ACCOUNT)
+    // });
+    // }
+    // additionalParams.put(Native.TXN_NOTE, new String[] {
+    // request.getParameter(Native.TXN_NOTE) });
+    // additionalParams.put(Native.REF_URL, new String[] {
+    // request.getParameter(Native.REF_URL) });
+    // additionalParams.put(Native.AGG_MID, new String[] {
+    // request.getParameter(AGG_MID) });
+    // additionalParams.put(Native.EXTEND_INFO, new String[] {
+    // request.getParameter(Native.EXTEND_INFO) });
+    // additionalParams.put(PAYMENT_DETAILS, new String[] { "dummyvpa@upi" });
+    // additionalParams.put(VIRTUAL_PAYMENT_ADDRESS, new String[] {
+    // "dummyvpa@upi" });
+    // additionalParams.put(
+    // com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ,
+    // new String[] { "true" });
+    // request.setAttribute(
+    // com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ,
+    // "true");
+    // additionalParams.put(OS_TYPE, new String[] {
+    // request.getParameter(OS_TYPE) });
+    // additionalParams.put(PSP_APP, new String[] {
+    // request.getParameter(PSP_APP) });
+    // paymentMode = PaymentTypeIdEnum.UPI.value;
+    // } else if
+    // (EPayMethod.DEBIT_CARD.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.DC.value;
+    // } else if
+    // (EPayMethod.CREDIT_CARD.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.CC.value;
+    // } else if
+    // ((EPayMethod.PAYTM_DIGITAL_CREDIT.getMethod().equalsIgnoreCase(paymentMode)))
+    // {
+    // String addMoney = null;
+    // if (null != additionalParams.get(ADD_MONEY)) {
+    // addMoney = additionalParams.get(ADD_MONEY)[0];
+    // }
+    // if (isPayMethodAllowed(paymentMode, txnToken, addMoney, false, null,
+    // mid)) {
+    // /*
+    // * in case of native tempToken to get paytm_digital_credit data
+    // * is txnToken but if data in redis is saved on mid+sso(for
+    // * tokenType sso),then tempToken will be mid+sso
+    // */
+    // String tempToken = txnToken;
+    // DigitalCreditAccountInfo accountInfo = (DigitalCreditAccountInfo)
+    // getAccountInfo(cashierInfoResponse,
+    // paymentFlow);
+    // if
+    // (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))
+    // && null == accountInfo) {
+    // // in case of sso based flow fetch balance will save account
+    // // info on mid+sso token
+    // tempToken =
+    // nativeSessionUtil.createTokenForMidSSOFlow(orderDetail.getPaytmSsoToken(),
+    // orderDetail.getMid());
+    // accountInfo = checkAccountInfoForSSOBasedFlow(tempToken, paymentFlow);
+    // }
+    //
+    // if (null == accountInfo) {
+    // /*
+    // * now since in case of native we are not sure merchant will
+    // * hit fetch balance api or not. So we will internally call
+    // * fetch balance
+    // */
+    // BalanceInfoResponse balanceInfoResponse =
+    // fetchBalance(EPayMethod.PAYTM_DIGITAL_CREDIT.getMethod(),
+    // txnToken, request);
+    //
+    // cashierInfoResponse = nativeSessionUtil.getCashierInfoResponse(txnToken);
+    // accountInfo = (DigitalCreditAccountInfo)
+    // getAccountInfo(cashierInfoResponse, paymentFlow);
+    // if
+    // (TokenType.SSO.getType().equals(request.getParameter(Native.TOKEN_TYPE))
+    // && null == accountInfo) {
+    // // in case of sso based flow fetch balance will save
+    // // account
+    // // info on mid+sso token
+    //
+    // accountInfo = checkAccountInfoForSSOBasedFlow(tempToken, paymentFlow);
+    // }
+    //
+    // if (!ResultCode.SUCCESS.getResultStatus().equals(
+    // balanceInfoResponse.getBody().getResultInfo().getResultStatus())
+    // || null == accountInfo) {
+    // // if now also account info is null or fetch balance
+    // // call fails , break the transaction.
+    // LOGGER.error(BizConstant.FailureLogs.ACCOUNT_INFO_FOR_PAYTM_DIGITAL_CREDIT_IS_UNAVAILABLE);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.ACCOUNT_INFO_FOR_PAYTM_DIGITAL_CREDIT_IS_UNAVAILABLE,
+    // null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // }
+    // String passCode =
+    // request.getParameter(TheiaConstant.RequestParams.Native.MPIN);
+    // if (StringUtils.isBlank(passCode) && isPostPaidMPinRequired(tempToken)) {
+    // LOGGER.error(BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_POST_PAID);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_MPIN_OR_ACCESS_TOKEN_FOR_POST_PAID, null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // StringBuilder digitalCreditPaymentDetails = new StringBuilder();
+    //
+    // additionalParams.put(KYC_CODE, new String[] {
+    // accountInfo.getExtendInfo().get(KYC_CODE) });
+    // additionalParams.put(KYC_VERSION, new String[] {
+    // accountInfo.getExtendInfo().get(KYC_VERSION) });
+    // additionalParams.put(FLOW_TYPE, new String[] { FLOW_TYPE_TRANSACTION });
+    //
+    // digitalCreditPaymentDetails.append(accountInfo.getPayerAccountNo()).append("|")
+    // .append(accountInfo.getExtendInfo().get(LENDER_ID)).append("|")
+    // .append(StringUtils.isNotBlank(passCode) ? passCode : "");
+    // additionalParams.put(PAYMENT_DETAILS, new String[] {
+    // digitalCreditPaymentDetails.toString() });
+    // paymentMode = PaymentTypeIdEnum.PAYTM_DIGITAL_CREDIT.value;
+    // }
+    // } else if (EPayMethod.EMI.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.EMI.value;
+    // additionalParams.put(BANK_CODE,
+    // new String[] {
+    // StringUtils.substringBefore(request.getParameter("planId"), "|") });
+    // additionalParams.put(EMI_TYPE, new String[] {
+    // request.getParameter("EMI_TYPE") });
+    // } else if
+    // (EPayMethod.BANK_MANDATE.getMethod().equalsIgnoreCase(paymentMode)) {
+    // LOGGER.info("Request received for creating bank Mandates, setting parameters for the same");
+    // paymentMode = PaymentTypeIdEnum.BANK_MANDATE.value;
+    // additionalParams.put(ACCOUNT_NUMBER,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.ACCOUNT_NUMBER)
+    // });
+    // additionalParams.put(PAYMENT_DETAILS,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE) });
+    // additionalParams.put(BANK_CODE,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.CHANNEL_CODE) });
+    // additionalParams.put(UPI_ACC_REF_ID,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.UPI_ACC_REF_ID)
+    // });
+    // additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.USER_NAME,
+    // new String[] { request.getParameter(Native.USER_NAME) });
+    // additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.ACCOUNT_TYPE,
+    // new String[] { request.getParameter(Native.ACCOUNT_TYPE) });
+    // additionalParams.put(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.BANK_IFSC,
+    // new String[] { request.getParameter(Native.BANK_IFSC) });
+    // additionalParams.put(
+    // com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.RequestParams.MANDATE_AUTH_MODE,
+    // new String[] { request.getParameter(Native.MANDATE_AUTH_MODE) });
+    // additionalParams.put(Native.MANDATE_TYPE, new String[] {
+    // request.getParameter(Native.MANDATE_TYPE) });
+    // additionalParams.put(BANK_NAME,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.BANK_NAME) });
+    // } else if
+    // (EPayMethod.GIFT_VOUCHER.getMethod().equalsIgnoreCase(paymentMode)) {
+    // paymentMode = PaymentTypeIdEnum.GIFT_VOUCHER.value;
+    // String templateId =
+    // request.getParameter(TheiaConstant.RequestParams.Native.MGV_TEMPLATE_ID);
+    // if (StringUtils.isBlank(templateId)) {
+    // LOGGER.error(BizConstant.FailureLogs.INVALID_TEMPLATE_ID_FOR_MGV);
+    // failureLogUtil.setFailureMsgForDwhPush(
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // BizConstant.FailureLogs.INVALID_TEMPLATE_ID_FOR_MGV, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    //
+    // additionalParams.put(TheiaConstant.RequestParams.Native.MGV_TEMPLATE_ID,
+    // new String[] { templateId });
+    // }
+    //
+    // String saveForFuture =
+    // request.getParameter(TheiaConstant.RequestParams.Native.STORE_INSTRUMENT);
+    // if ("1".equals(saveForFuture)) {
+    // additionalParams.put(TheiaConstant.RequestParams.STORE_CARD, new String[]
+    // { "1" });
+    // }
+    // String industryTypeId = getIndustryTypeId(mid);
+    // additionalParams.put(TheiaConstant.RequestParams.INDUSTRY_TYPE_ID, new
+    // String[] { industryTypeId });
+    // additionalParams.put(TheiaConstant.RequestParams.AUTH_MODE, new String[]
+    // { "3D" });
+    //
+    // if (aoaUtils.isAOAMerchant(mid) &&
+    // !ERequestType.isSubscriptionRequest(orderDetail.getRequestType())) {
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // TheiaConstant.RequestTypes.UNI_PAY });
+    //
+    // } else if
+    // (ERequestType.isSubscriptionRequest(orderDetail.getRequestType())) {
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // orderDetail.getRequestType() });
+    // if (StringUtils.isNotEmpty(request.getParameter(SUBSCRIPTION_ID))) {
+    // additionalParams.put(SUBSCRIPTION_ID, new String[] {
+    // request.getParameter(SUBSCRIPTION_ID) });
+    // } else {
+    // StringBuilder key = new
+    // StringBuilder(orderDetail.getRequestType()).append(txnToken);
+    // if (aoaUtils.isAOAMerchant(mid)) {
+    // LOGGER.error("AOA subscription client call is being used");
+    // // AoaSubscriptionCreateResponse aoaSubscriptionResponse =
+    // // (AoaSubscriptionCreateResponse)
+    // // theiaTransactionalRedisUtil
+    // // .get(key.toString());
+    // // if (aoaSubscriptionResponse != null) {
+    // // additionalParams.put(SUBSCRIPTION_ID,
+    // // new String[] {
+    // // aoaSubscriptionResponse.getSubscriptionId() });
+    // // }
+    // } else {
+    // SubscriptionResponse subscriptionResponse = (SubscriptionResponse)
+    // theiaTransactionalRedisUtil
+    // .get(key.toString());
+    // if (subscriptionResponse != null) {
+    // additionalParams
+    // .put(SUBSCRIPTION_ID, new String[] {
+    // subscriptionResponse.getSubscriptionId() });
+    // if (StringUtils.isNotBlank(subscriptionResponse.getPaymentMid())
+    // && StringUtils.isNotBlank(subscriptionResponse.getPaymentOrderId())) {
+    // additionalParams.put(DUMMY_MERCHANT_ID,
+    // new String[] { subscriptionResponse.getPaymentMid() });
+    // additionalParams.put(DUMMY_ORDER_ID,
+    // new String[] { subscriptionResponse.getPaymentOrderId() });
+    // additionalParams.put(AUTO_REFUND, new String[] { Boolean.TRUE.toString()
+    // });
+    // }
+    // }
+    // }
+    // }
+    //
+    // SubscriptionTransactionRequestBody subscriptionTransactionRequestBody =
+    // (SubscriptionTransactionRequestBody) orderDetail;
+    // if (subscriptionTransactionRequestBody != null) {
+    // additionalParams.put(SUBS_FREQUENCY_UNIT,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionFrequencyUnit() });
+    // additionalParams.put(SUBS_EXPIRY_DATE,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionExpiryDate() });
+    //
+    // additionalParams.put(SUBS_START_DATE,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionStartDate() });
+    //
+    // additionalParams.put(SUBS_GRACE_DAYS,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionGraceDays() });
+    // additionalParams.put(VALIDATE_ACCOUNT_NUMBER,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getValidateAccountNumber() });
+    // if
+    // (StringUtils.isNotBlank(subscriptionTransactionRequestBody.getAccountNumber()))
+    // additionalParams.put(ACCOUNT_NUMBER,
+    // new String[] { subscriptionTransactionRequestBody.getAccountNumber() });
+    // additionalParams.put(ALLOW_UNVERIFIED_ACCOUNT,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getAllowUnverifiedAccount() });
+    // additionalParams.put(SUBS_FREQUENCY,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionFrequency() });
+    // additionalParams.put(SUBS_ENABLE_RETRY,
+    // new String[] {
+    // subscriptionTransactionRequestBody.getSubscriptionEnableRetry() });
+    // additionalParams.put(FLEXI_SUBSCRIPTION,
+    // new String[] {
+    // String.valueOf(subscriptionTransactionRequestBody.isFlexiSubscription())
+    // });
+    // }
+    //
+    // } else {
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // TheiaConstant.RequestTypes.NATIVE });
+    //
+    // }
+    //
+    // if (ERequestType.NATIVE_SUBSCRIPTION.getType().equals(
+    // request.getParameter(TheiaConstant.RequestParams.REQUEST_TYPE))) {
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // TheiaConstant.RequestTypes.NATIVE_SUBSCRIPTION });
+    // }
+    //
+    // if ((merchantPreferenceService.isEligibleForMultipleMBIDFlow(mid) &&
+    // ff4JHelper.isFF4JFeatureForMidEnabled(
+    // ENABLE_TPV_FOR_ALL_REQUEST_TYPES, mid))
+    // ||
+    // (TheiaConstant.RequestTypes.NATIVE_MF.equals(orderDetail.getRequestType())
+    // ||
+    // TheiaConstant.RequestTypes.NATIVE_ST.equals(orderDetail.getRequestType())
+    // || (orderDetail
+    // .getLinkDetailsData() != null &&
+    // (TheiaConstant.RequestTypes.NATIVE_MF.equals(orderDetail
+    // .getLinkDetailsData().getSubRequestType()) ||
+    // TheiaConstant.RequestTypes.NATIVE_ST
+    // .equals(orderDetail.getLinkDetailsData().getSubRequestType()))))) {
+    // // if (merchantPreferenceService.isEligibleForMultipleMBIDFlow(mid)
+    // // &&
+    // //
+    // ff4JHelper.isFF4JFeatureForMidEnabled(ENABLE_TPV_FOR_ALL_REQUEST_TYPES,
+    // // mid)) {
+    // // additionalParams.put(REQUEST_TYPE, new
+    // // String[]{TheiaConstant.RequestTypes.NATIVE});
+    // // } else if (orderDetail.getLinkDetailsData() != null) {
+    // if (orderDetail.getLinkDetailsData() != null) {
+    // if (!isEnhancedNativeFlow) {
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // orderDetail.getLinkDetailsData()
+    // .getSubRequestType() });
+    // }
+    // } else {
+    // if (!orderDetail.getRequestType().equals("Payment"))
+    // additionalParams.put(REQUEST_TYPE, new String[] {
+    // orderDetail.getRequestType() });
+    // }
+    // LOGGER.info("Request Recieved - {}, Updated Request Type - {}",
+    // orderDetail.getRequestType(),
+    // additionalParams.get(REQUEST_TYPE));
+    //
+    // additionalParams.put(VALIDATE_ACCOUNT_NUMBER, new String[] { "false" });
+    // if (StringUtils.isNotBlank(orderDetail.getValidateAccountNumber())) {
+    // additionalParams.put(VALIDATE_ACCOUNT_NUMBER, new String[] {
+    // orderDetail.getValidateAccountNumber() });
+    // }
+    // if (StringUtils.isNotBlank(orderDetail.getAllowUnverifiedAccount())) {
+    // additionalParams
+    // .put(ALLOW_UNVERIFIED_ACCOUNT, new String[] {
+    // orderDetail.getAllowUnverifiedAccount() });
+    // }
+    // if (StringUtils.isNotBlank(orderDetail.getAccountNumber())) {
+    // LOGGER.info("Overriding account Number from txnToken");
+    // additionalParams.put(ACCOUNT_NUMBER, new String[] {
+    // orderDetail.getAccountNumber() });
+    // }
+    // }
+    // additionalParams.put(Native.TOKEN_TYPE, new String[] {
+    // request.getParameter(Native.TOKEN_TYPE) });
+    // additionalParams.put(TXN_AMOUNT, new String[] {
+    // orderDetail.getTxnAmount().getValue() });
+    // if (orderDetail.getTipAmount() != null &&
+    // orderDetail.getTipAmount().getValue() != null)
+    // additionalParams.put(TIP_AMOUNT, new String[] {
+    // orderDetail.getTipAmount().getValue() });
+    // additionalParams.put(SSO_TOKEN, new String[] {
+    // orderDetail.getPaytmSsoToken() });
+    // additionalParams.put(CALLBACK_URL, new String[] {
+    // orderDetail.getCallbackUrl() });
+    // additionalParams.put(WEBSITE, new String[] { orderDetail.getWebsiteName()
+    // });
+    // additionalParams.put(MID, new String[] { mid });
+    // additionalParams.put(ORDER_ID, new String[] { orderId });
+    // additionalParams.put(PAYMENT_TYPE_ID, new String[] { paymentMode });
+    //
+    // if
+    // (StringUtils.isNotBlank(request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID)))
+    // {
+    // additionalParams.put(DEVICE_ID,
+    // new String[] {
+    // request.getParameter(TheiaConstant.RequestParams.Native.DEVICE_ID) });
+    // } else {
+    // additionalParams.put(DEVICE_ID, new String[] {
+    // request.getParameter(DEVICE_ID_FOR_RISK) });
+    // }
+    //
+    // if (orderDetail.getExtendInfo() != null) {
+    // additionalParams.put(MERCH_UNQ_REF, new String[] {
+    // orderDetail.getExtendInfo().getMercUnqRef() });
+    // additionalParams.put(UDF_1, new String[] {
+    // orderDetail.getExtendInfo().getUdf1() });
+    // additionalParams.put(UDF_2, new String[] {
+    // orderDetail.getExtendInfo().getUdf2() });
+    // additionalParams.put(UDF_3, new String[] {
+    // orderDetail.getExtendInfo().getUdf3() });
+    // additionalParams.put(SUB_WALLET_AMOUNT, new String[] {
+    // orderDetail.getExtendInfo().getSubwalletAmount() });
+    // additionalParams.put(ADDITIONAL_INFO, new String[] {
+    // orderDetail.getExtendInfo().getComments() });
+    //
+    // // setting link specific variables
+    // additionalParams.put(LINK_ID, new String[] {
+    // orderDetail.getExtendInfo().getLinkId() });
+    // additionalParams.put(INVOICE_ID, new String[] {
+    // orderDetail.getExtendInfo().getLinkInvoiceId() });
+    // additionalParams.put(LINK_DESCRIPTION, new String[] {
+    // orderDetail.getExtendInfo().getLinkDesc() });
+    // additionalParams.put(LINK_NAME, new String[] {
+    // orderDetail.getExtendInfo().getLinkName() });
+    //
+    // if
+    // (StringUtils.isNotBlank(orderDetail.getExtendInfo().getAmountToBeRefunded()))
+    // {
+    // additionalParams
+    // .put(AMOUNT_TO_BE_REFUNDED, new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail
+    // .getExtendInfo().getAmountToBeRefunded()) });
+    // }
+    // }
+    //
+    // // setting link details in case of link based payment of MF, ST
+    // if (orderDetail.getLinkDetailsData() != null) {
+    // additionalParams.put(LINK_ID, new String[] {
+    // orderDetail.getLinkDetailsData().getLinkId() });
+    // additionalParams.put(INVOICE_ID, new String[] {
+    // orderDetail.getLinkDetailsData().getInvoiceId() });
+    // additionalParams.put(LINK_DESCRIPTION,
+    // new String[] { orderDetail.getLinkDetailsData().getLinkDescription() });
+    // additionalParams.put(LINK_NAME, new String[] {
+    // orderDetail.getLinkDetailsData().getLinkName() });
+    // }
+    // if (null != request.getParameter(WALLET_TYPE)) {
+    // additionalParams.put(WALLET_TYPE, new String[] {
+    // request.getParameter(WALLET_TYPE) });
+    // }
+    //
+    // if (orderDetail.getUserInfo() != null) {
+    // additionalParams.put(CUST_ID, new String[] {
+    // orderDetail.getUserInfo().getCustId() });
+    // additionalParams.put(MOBILE_NO, new String[] {
+    // orderDetail.getUserInfo().getMobile() });
+    // additionalParams.put(ADDRESS_1, new String[] {
+    // orderDetail.getUserInfo().getAddress() });
+    // additionalParams.put(PINCODE, new String[] {
+    // orderDetail.getUserInfo().getPincode() });
+    // }
+    // if (null != orderDetail.getShippingInfo()) {
+    // additionalParams.put(SHIPPING_INFO,
+    // new String[] { JsonMapper.mapObjectToJson(orderDetail.getShippingInfo())
+    // });
+    // }
+    // if (null != orderDetail.getPromoCode()) {
+    // additionalParams.put(PROMO_CAMP_ID, new String[] {
+    // orderDetail.getPromoCode() });
+    // }
+    //
+    // if (null != orderDetail.getExtendInfo()) {
+    // additionalParams.put(ConstantsUtil.PARAMETERS.REQUEST.EXTENDINFO,
+    // new String[] { JsonMapper.mapObjectToJson(orderDetail.getExtendInfo())
+    // });
+    // }
+    //
+    // if (null != orderDetail.getEmiOption()) {
+    // additionalParams.put(EMI_OPTIONS, new String[] {
+    // orderDetail.getEmiOption() });
+    // }
+    //
+    // if (!StringUtils.isEmpty(orderDetail.getCardTokenRequired())) {
+    // additionalParams.put(IS_CARD_TOKEN_REQUIRED, new String[] {
+    // orderDetail.getCardTokenRequired() });
+    // }
+    //
+    // // cart validation is to be done by backend
+    // if ((isEnhancedNativeFlow || isNativeJsonRequest)
+    // && StringUtils.isNotBlank(orderDetail.getCartValidationRequired())) {
+    // additionalParams.put(IS_CART_VALIDATION_REQUIRED, new String[] {
+    // orderDetail.getCartValidationRequired() });
+    // }
+    // if (orderDetail.getAdditionalInfo() != null) {
+    // additionalParams.put(ADDITIONALINFO,
+    // new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getAdditionalInfo()) });
+    // }
+    //
+    // // channelId to be put for enhanced as it was received during the call
+    // // to render
+    // if (isEnhancedNativeFlow &&
+    // StringUtils.isNotBlank(orderDetail.getChannelId())) {
+    // additionalParams.put(CHANNEL_ID, new String[] {
+    // orderDetail.getChannelId() });
+    // }
+    //
+    // if ((isEnhancedNativeFlow || isNativeJsonRequest)
+    // && StringUtils.isNotBlank(request.getParameter(Native.APP_ID))) {
+    // additionalParams.put(APP_ID, new String[] {
+    // request.getParameter(Native.APP_ID) });
+    // }
+    //
+    // if (isNativeJsonRequest) {
+    // additionalParams.put(NATIVE_JSON_REQUEST,
+    // new String[] { String.valueOf(request.getAttribute(NATIVE_JSON_REQUEST))
+    // });
+    // }
+    //
+    // String deepLinkReq[] = additionalParams
+    // .get(com.paytm.pgplus.payloadvault.theia.constant.TheiaConstant.ChannelInfoKeys.IS_DEEP_LINK_REQ);
+    // if (deepLinkReq != null && deepLinkReq.length > 0 &&
+    // "true".equals(deepLinkReq[0])) {
+    // LOGGER.info("Setting Parameters for UPI Intent");
+    // // OVERRIDING ADDITIONAL_INFO for UPI_INTENT paymentMode
+    // additionalParams.put(ADDITIONAL_INFO, new String[] {
+    // request.getParameter(Native.EXTEND_INFO) });
+    // additionalParams.put(INSTA_DEEP_LINK, new String[] { "true" });
+    // additionalParams.put(ACCOUNT_NUMBER, new String[] {
+    // orderDetail.getAccountNumber() });
+    // }
+    // /**
+    // * for Corporate Advance Deposit
+    // */
+    // additionalParams.put(CORPORATE_CUST_ID, new String[] {
+    // orderDetail.getCorporateCustId() });
+    //
+    // additionalParams.put(CARD_HASH, new String[] { orderDetail.getCardHash()
+    // });
+    //
+    // if (orderDetail.getPayableAmount() != null) {
+    // /*
+    // * this amount will be sent to promo-service
+    // */
+    // additionalParams.put(PROMO_AMOUNT, new String[] {
+    // orderDetail.getPayableAmount().getValue() });
+    // }
+    //
+    // if (EPayMethod.BALANCE.getMethod().equals(paymentMode) ||
+    // PaymentTypeIdEnum.PPI.getValue().equals(paymentMode)) {
+    // setFlagToRedirectToShowPaymentPage(request, additionalParams,
+    // paymentFlow);
+    // }
+    //
+    // if
+    // (TokenType.SSO.getType().equalsIgnoreCase(request.getParameter(Native.TOKEN_TYPE)))
+    // {
+    // additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT,
+    // new String[] { TRUE });
+    // } else {
+    // if (orderDetail != null && orderDetail.isOfflineFlow())
+    // additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT,
+    // new String[] { TRUE });
+    // else
+    // additionalParams.put(TheiaConstant.DataEnrichmentKeys.IS_OFFLINE_MERCHANT,
+    // new String[] { FALSE });
+    // }
+    // if (EPayMethod.BANK_TRANSFER.getMethod().equals(paymentMode)) {
+    // additionalParams.put(VAN_INFO, new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getVanInfo()) });
+    // additionalParams.put(TPV_INFOS, new String[] {
+    // JsonMapper.mapObjectToJson(orderDetail.getTpvInfo()) });
+    // }
+    // String preferredOtpPage =
+    // request.getParameter(Native.PREFERRED_OTP_PAGE);
+    // if (StringUtils.isNotBlank(preferredOtpPage)
+    // && !(PreferredOtpPage.MERCHANT.getValue().equals(preferredOtpPage) ||
+    // PreferredOtpPage.BANK.getValue()
+    // .equals(preferredOtpPage))) {
+    // LOGGER.error("PreferredOtpPage Value found {} Value Could only be {} {}",
+    // preferredOtpPage,
+    // PreferredOtpPage.MERCHANT.getValue(), PreferredOtpPage.BANK.getValue());
+    // failureLogUtil.setFailureMsgForDwhPush(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultCodeId(),
+    // ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg(), null,
+    // true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(true)
+    // .setRetryMsg(ResultCode.REQUEST_PARAMS_VALIDATION_EXCEPTION.getResultMsg()).build();
+    // }
+    // additionalParams.put(Native.PREFERRED_OTP_PAGE, new String[] {
+    // preferredOtpPage });
+    //
+    // if (request.getParameter(CARD_PRE_AUTH_TYPE) != null) {
+    // additionalParams.put(CARD_PRE_AUTH_TYPE, new String[] {
+    // request.getParameter(CARD_PRE_AUTH_TYPE) });
+    // }
+    // if (request.getParameter(PRE_AUTH_BLOCK_SECONDS) != null) {
+    // additionalParams.put(PRE_AUTH_BLOCK_SECONDS, new String[] {
+    // request.getParameter(PRE_AUTH_BLOCK_SECONDS) });
+    // }
+    //
+    // if (isEligibleForUpiToAddNPay) {
+    // additionalParams.put(UPI_CONVERTED_TO_ADDNPAY, new String[] { TRUE });
+    // }
+    //
+    // if (request.getParameter(Native.ADD_ONE_RUPEE) != null) {
+    // additionalParams.put(Native.ADD_ONE_RUPEE, new String[] {
+    // request.getParameter(Native.ADD_ONE_RUPEE) });
+    // }
+    //
+    // if (failIfWalletInactive(paymentFlow, paymentMode, cashierInfoResponse))
+    // {
+    // LOGGER.error(BizConstant.FailureLogs.USER_WALLET_IS_DEACTIVATED);
+    // failureLogUtil.setFailureMsgForDwhPush(ResponseConstants.WALLET_INACTIVE_FAILURE.getCode(),
+    // BizConstant.FailureLogs.USER_WALLET_IS_DEACTIVATED, null, true);
+    // throw new
+    // NativeFlowException.ExceptionBuilder(ResponseConstants.WALLET_INACTIVE_FAILURE)
+    // .isHTMLResponse(sendHTML).isRetryAllowed(false)
+    // .setRetryMsg(ResponseConstants.WALLET_INACTIVE_FAILURE.getMessage()).build();
+    //
+    // }
+    // if (request.getAttribute(PAYERCMID) != null) {
+    // additionalParams.put(PAYER_CMID, new String[] { (String)
+    // request.getAttribute(PAYERCMID) });
+    // }
+    //
+    // additionalParams.put(VARIABLE_LENGTH_OTP_SUPPORTED,
+    // new String[] { request.getParameter(VARIABLE_LENGTH_OTP_SUPPORTED) });
+    // if (isNativeJsonRequest)
+    // additionalParams.put(SOURCE, new String[] { request.getHeader(SOURCE) });
+    //
+    // return additionalParams;
+    // }
 
     public void paymentOptionCardIndexNoPopulated(HttpServletRequest request, ValidateRequest subventionvalidateRequest) {
         if (subventionvalidateRequest.getPaymentDetails() != null
@@ -3221,13 +3635,17 @@ public class ProcessTransactionUtil {
         }
     }
 
-    private void throwRiskRejectException(String customMessage, String txnToken,
-            InitiateTransactionRequestBody orderDetail) {
-        nativeRetryUtil.increaseRetryCount(txnToken, orderDetail.getMid(), orderDetail.getOrderId());
-        boolean isRetryAllowed = nativeRetryUtil.isRetryPossible(txnToken, orderDetail.getMid());
-        throw new RiskRejectException.ExceptionBuilder().setResponseConstant(ResponseConstants.RISK_REJECT)
-                .setCustomCallbackMsg(customMessage).setRetryAllowed(isRetryAllowed).build();
-    }
+    // private void throwRiskRejectException(String customMessage, String
+    // txnToken,
+    // InitiateTransactionRequestBody orderDetail) {
+    // nativeRetryUtil.increaseRetryCount(txnToken, orderDetail.getMid(),
+    // orderDetail.getOrderId());
+    // boolean isRetryAllowed = nativeRetryUtil.isRetryPossible(txnToken,
+    // orderDetail.getMid());
+    // throw new
+    // RiskRejectException.ExceptionBuilder().setResponseConstant(ResponseConstants.RISK_REJECT)
+    // .setCustomCallbackMsg(customMessage).setRetryAllowed(isRetryAllowed).build();
+    // }
 
     private void throwExceptionNativeTxn(HttpServletRequest request, ResultCode resultCode) {
         if (isNativeJsonRequest(request)) {
@@ -3685,128 +4103,147 @@ public class ProcessTransactionUtil {
         return merchantPreferenceService.isPwpEnabled(mid);
     }
 
-    private void validateFeeForAddMoney(HttpServletRequest request, NativeInitiateRequest nativeInitiateRequest,
-            Map<String, String[]> additionalParams, NativeCashierInfoResponse cashierInfoResponse, String txnToken) {
-
-        InitiateTransactionRequestBody orderDetail = nativeInitiateRequest.getInitiateTxnReq().getBody();
-        String mid = orderDetail.getMid();
-        String payMode = request.getParameter("paymentMode");
-        boolean isPaytmAddMoneyMid = (StringUtils.equals(mid,
-                ConfigurationUtil.getProperty(BizConstant.MP_ADD_MONEY_MID)));
-
-        if ((isPaytmAddMoneyMid || orderDetail.isNativeAddMoney())
-                && workFlowHelper.isMidAllowedChargeFeeOnAddMoneyByWallet(mid)) {
-            // LOGGER.info("new addMoney fee integration");
-
-            if (isPaytmAddMoneyMid && orderDetail.isAddMoneyFeeAppliedOnWallet()) {
-                LOGGER.info("Not consulting wallet, isAddMoneyFeeAppliedOnWallet=true");
-                additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
-                additionalParams.put(Native.RISK_EXTENDED_INFO,
-                        new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
-                return;
-            } else {
-                LOGGER.info("Consulting wallet for fee details ");
-                UserDetailsBiz userDetails = nativeValidationService.getUserDetails(nativeInitiateRequest
-                        .getInitiateTxnReq().getBody());
-                if (userDetails == null) {
-                    throwExceptionNativeTxn(request, ResultCode.SESSION_EXPIRED_EXCEPTION);
-                }
-                boolean isGvPurchaseFlow = ifAddMoneyInitiatedForSubWallet(orderDetail, GV_PRODUCT_CODE);
-                boolean isTransitWalletFlow = ifAddMoneyInitiatedForSubWallet(orderDetail, NCMC_PRODUCT_CODE);
-                String addMoneySource = getAddMoneyRequestSource(orderDetail, request);
-                GenericCoreResponseBean<BizWalletConsultResponse> walletConsultResponse = workFlowHelper
-                        .consultWalletService(orderDetail, request, userDetails, isGvPurchaseFlow, isTransitWalletFlow,
-                                addMoneySource);
-                if (!walletConsultResponse.isSuccessfullyProcessed()) {
-                    LOGGER.error("Wallet consult failed : {} , proceeding with Add Money without wallet consult",
-                            walletConsultResponse.getFailureDescription());
-                }
-                if (orderDetail.isNativeAddMoney() || isEnhancedNativeFlow(request)) {
-                    validateFeeForAddMoneyForEnhanceAndTopUps(walletConsultResponse.getResponse(), txnToken, request,
-                            orderDetail, payMode, userDetails);
-                    return;
-                }
-                RiskFeeDetails riskFeeDetails = orderDetail.getRiskFeeDetails();
-                if (!isTxnAmountValid(nativeInitiateRequest, riskFeeDetails)) {
-                    LOGGER.error("Txn Amnt doesn't match with the sum of risk fee and initial amount");
-                    throwExceptionNativeTxn(request, ResponseConstants.INVALID_TXN_AMOUNT);
-                }
-
-                Map<String, Object> feeDetails = getFeeDetailIfUserRisky(walletConsultResponse.getResponse(), payMode);
-                String feeRateCode = (null != feeDetails) ? (String) feeDetails.get("feeRateCode") : null;
-                String errorMsg = (null != feeDetails) ? (String) feeDetails.get("rejectMsg") : null;
-                boolean isRiskyUser = (feeDetails != null && StringUtils.isNotBlank(errorMsg) && !isAddMoneyPcfEnabled(
-                        mid, userDetails.getUserId(), feeRateCode));
-                if (!isRiskyUser) {
-                    checkIfFeeAppliedForNonRiskyUser(request, riskFeeDetails);
-                } else {
-                    String riskRejectMessage = (String) feeDetails.get("rejectMsg");
-                    String feePercent = (String) feeDetails.get("feePercent");
-                    boolean isAddMoneyToGv = checkIfAddMoneyToGv(orderDetail, walletConsultResponse);
-                    boolean isAddMoneyToTransitBlockWallet = checkIfAddMoneyToTransitBlockWallet(orderDetail,
-                            walletConsultResponse);
-                    if (isAddMoneyToGv) {
-                        // making GV+charges validation configurable
-
-                        Boolean gvPlusChargesAllowedOnCc = Boolean.parseBoolean(ConfigurationUtil.getProperty(
-
-                        "gv.plus.charges.allowed.on.cc", "true"));
-
-                        if (!gvPlusChargesAllowedOnCc) {
-
-                            // Handling for add money to GV amount > 10,000
-
-                            // (configurable at wallet's end)
-
-                            LOGGER.info("Failing txn for Add money to GV > 10,000");
-
-                            throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
-
-                        }
-                    }
-                    if (isAddMoneyToTransitBlockWallet) {
-                        LOGGER.info("Failing txn for Add money to Transit blocked wallet");
-                        throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
-                    }
-                    if (isRiskFeeValid(request.getParameter("paymentMode"), riskFeeDetails, feePercent)) {
-                        LOGGER.info("Risk fee in pay request is valid and hence proceeding for payment");
-                        additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
-                        additionalParams.put(Native.RISK_EXTENDED_INFO,
-                                new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
-                    } else {
-                        // When fee applied on card not on user , old flow
-                        // breaks
-                        LOGGER.info("Risk fee in pay request is not equals to fee from wallet : fee applied on card");
-                        throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
-                    }
-                }
-            }
-        } else if ((com.paytm.pgplus.common.enums.PayMethod.CREDIT_CARD.getMethod().equals(payMode))
-                && isPaytmAddMoneyMid) {
-            // LOGGER.info("old addMoney fee integration");
-            LOGGER.info("Add Money Request For CC on nativePlus and native");
-            RiskFeeDetails riskFeeDetails = orderDetail.getRiskFeeDetails();
-            if (!isTxnAmountValid(nativeInitiateRequest, riskFeeDetails)) {
-                LOGGER.error("Txn Amnt doesn't match with the sum of risk fee and initial amount");
-                throwExceptionNativeTxn(request, ResponseConstants.INVALID_TXN_AMOUNT);
-            }
-            if (!ifAddMoneyInitiatedForSubWallet(orderDetail, GV_PRODUCT_CODE)
-                    && !ifAddMoneyInitiatedForSubWallet(orderDetail, NCMC_PRODUCT_CODE)) {
-                boolean isRiskyUser = isRiskyUser(request, nativeInitiateRequest);
-                if (!isRiskyUser) {
-                    checkIfFeeAppliedForNonRiskyUser(request, riskFeeDetails);
-                } else {
-                    if (isRiskFeeValid(request.getParameter("paymentMode"), riskFeeDetails, null)) {
-                        LOGGER.info("Risk fee in pay request is valid and hence proceeding for payment");
-                        additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
-                        additionalParams.put(Native.RISK_EXTENDED_INFO,
-                                new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
-                    }
-                }
-            }
-        }
-
-    }
+    // private void validateFeeForAddMoney(HttpServletRequest request,
+    // NativeInitiateRequest nativeInitiateRequest,
+    // Map<String, String[]> additionalParams, NativeCashierInfoResponse
+    // cashierInfoResponse, String txnToken) {
+    //
+    // InitiateTransactionRequestBody orderDetail =
+    // nativeInitiateRequest.getInitiateTxnReq().getBody();
+    // String mid = orderDetail.getMid();
+    // String payMode = request.getParameter("paymentMode");
+    // boolean isPaytmAddMoneyMid = (StringUtils.equals(mid,
+    // ConfigurationUtil.getProperty(BizConstant.MP_ADD_MONEY_MID)));
+    //
+    // if ((isPaytmAddMoneyMid || orderDetail.isNativeAddMoney())
+    // && workFlowHelper.isMidAllowedChargeFeeOnAddMoneyByWallet(mid)) {
+    // // LOGGER.info("new addMoney fee integration");
+    //
+    // if (isPaytmAddMoneyMid && orderDetail.isAddMoneyFeeAppliedOnWallet()) {
+    // LOGGER.info("Not consulting wallet, isAddMoneyFeeAppliedOnWallet=true");
+    // additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
+    // additionalParams.put(Native.RISK_EXTENDED_INFO,
+    // new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
+    // return;
+    // } else {
+    // LOGGER.info("Consulting wallet for fee details ");
+    // UserDetailsBiz userDetails =
+    // nativeValidationService.getUserDetails(nativeInitiateRequest
+    // .getInitiateTxnReq().getBody());
+    // if (userDetails == null) {
+    // throwExceptionNativeTxn(request, ResultCode.SESSION_EXPIRED_EXCEPTION);
+    // }
+    // boolean isGvPurchaseFlow = ifAddMoneyInitiatedForSubWallet(orderDetail,
+    // GV_PRODUCT_CODE);
+    // boolean isTransitWalletFlow =
+    // ifAddMoneyInitiatedForSubWallet(orderDetail, NCMC_PRODUCT_CODE);
+    // String addMoneySource = getAddMoneyRequestSource(orderDetail, request);
+    // GenericCoreResponseBean<BizWalletConsultResponse> walletConsultResponse =
+    // workFlowHelper
+    // .consultWalletService(orderDetail, request, userDetails,
+    // isGvPurchaseFlow, isTransitWalletFlow,
+    // addMoneySource);
+    // if (!walletConsultResponse.isSuccessfullyProcessed()) {
+    // LOGGER.error("Wallet consult failed : {} , proceeding with Add Money without wallet consult",
+    // walletConsultResponse.getFailureDescription());
+    // }
+    // if (orderDetail.isNativeAddMoney() || isEnhancedNativeFlow(request)) {
+    // validateFeeForAddMoneyForEnhanceAndTopUps(walletConsultResponse.getResponse(),
+    // txnToken, request,
+    // orderDetail, payMode, userDetails);
+    // return;
+    // }
+    // RiskFeeDetails riskFeeDetails = orderDetail.getRiskFeeDetails();
+    // if (!isTxnAmountValid(nativeInitiateRequest, riskFeeDetails)) {
+    // LOGGER.error("Txn Amnt doesn't match with the sum of risk fee and initial amount");
+    // throwExceptionNativeTxn(request, ResponseConstants.INVALID_TXN_AMOUNT);
+    // }
+    //
+    // Map<String, Object> feeDetails =
+    // getFeeDetailIfUserRisky(walletConsultResponse.getResponse(), payMode);
+    // String feeRateCode = (null != feeDetails) ? (String)
+    // feeDetails.get("feeRateCode") : null;
+    // String errorMsg = (null != feeDetails) ? (String)
+    // feeDetails.get("rejectMsg") : null;
+    // boolean isRiskyUser = (feeDetails != null &&
+    // StringUtils.isNotBlank(errorMsg) && !isAddMoneyPcfEnabled(
+    // mid, userDetails.getUserId(), feeRateCode));
+    // if (!isRiskyUser) {
+    // checkIfFeeAppliedForNonRiskyUser(request, riskFeeDetails);
+    // } else {
+    // String riskRejectMessage = (String) feeDetails.get("rejectMsg");
+    // String feePercent = (String) feeDetails.get("feePercent");
+    // boolean isAddMoneyToGv = checkIfAddMoneyToGv(orderDetail,
+    // walletConsultResponse);
+    // boolean isAddMoneyToTransitBlockWallet =
+    // checkIfAddMoneyToTransitBlockWallet(orderDetail,
+    // walletConsultResponse);
+    // if (isAddMoneyToGv) {
+    // // making GV+charges validation configurable
+    //
+    // Boolean gvPlusChargesAllowedOnCc =
+    // Boolean.parseBoolean(ConfigurationUtil.getProperty(
+    //
+    // "gv.plus.charges.allowed.on.cc", "true"));
+    //
+    // if (!gvPlusChargesAllowedOnCc) {
+    //
+    // // Handling for add money to GV amount > 10,000
+    //
+    // // (configurable at wallet's end)
+    //
+    // LOGGER.info("Failing txn for Add money to GV > 10,000");
+    //
+    // throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
+    //
+    // }
+    // }
+    // if (isAddMoneyToTransitBlockWallet) {
+    // LOGGER.info("Failing txn for Add money to Transit blocked wallet");
+    // throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
+    // }
+    // if (isRiskFeeValid(request.getParameter("paymentMode"), riskFeeDetails,
+    // feePercent)) {
+    // LOGGER.info("Risk fee in pay request is valid and hence proceeding for payment");
+    // additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
+    // additionalParams.put(Native.RISK_EXTENDED_INFO,
+    // new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
+    // } else {
+    // // When fee applied on card not on user , old flow
+    // // breaks
+    // LOGGER.info("Risk fee in pay request is not equals to fee from wallet : fee applied on card");
+    // throwRiskRejectException(riskRejectMessage, txnToken, orderDetail);
+    // }
+    // }
+    // }
+    // } else if
+    // ((com.paytm.pgplus.common.enums.PayMethod.CREDIT_CARD.getMethod().equals(payMode))
+    // && isPaytmAddMoneyMid) {
+    // // LOGGER.info("old addMoney fee integration");
+    // LOGGER.info("Add Money Request For CC on nativePlus and native");
+    // RiskFeeDetails riskFeeDetails = orderDetail.getRiskFeeDetails();
+    // if (!isTxnAmountValid(nativeInitiateRequest, riskFeeDetails)) {
+    // LOGGER.error("Txn Amnt doesn't match with the sum of risk fee and initial amount");
+    // throwExceptionNativeTxn(request, ResponseConstants.INVALID_TXN_AMOUNT);
+    // }
+    // if (!ifAddMoneyInitiatedForSubWallet(orderDetail, GV_PRODUCT_CODE)
+    // && !ifAddMoneyInitiatedForSubWallet(orderDetail, NCMC_PRODUCT_CODE)) {
+    // boolean isRiskyUser = isRiskyUser(request, nativeInitiateRequest);
+    // if (!isRiskyUser) {
+    // checkIfFeeAppliedForNonRiskyUser(request, riskFeeDetails);
+    // } else {
+    // if (isRiskFeeValid(request.getParameter("paymentMode"), riskFeeDetails,
+    // null)) {
+    // LOGGER.info("Risk fee in pay request is valid and hence proceeding for payment");
+    // additionalParams.put(IS_ADD_MONEY_RISK_INVOLVED, new String[] { TRUE });
+    // additionalParams.put(Native.RISK_EXTENDED_INFO,
+    // new String[] { request.getParameter(Native.RISK_EXTENDED_INFO) });
+    // }
+    // }
+    // }
+    // }
+    //
+    // }
 
     private String getAddMoneyRequestSource(InitiateTransactionRequestBody orderDetail, HttpServletRequest request) {
         String addMoneySource = StringUtils.EMPTY;
@@ -3865,29 +4302,38 @@ public class ProcessTransactionUtil {
 
     }
 
-    private void validateFeeForAddMoneyForEnhanceAndTopUps(BizWalletConsultResponse walletConsultResponse,
-            String txnToken, HttpServletRequest request, InitiateTransactionRequestBody orderDetail, String payMode,
-            UserDetailsBiz userDetails) {
-        Map<String, Object> feeDetails = getFeeDetailIfUserRisky(walletConsultResponse, payMode);
-        String errorMessage = (null != feeDetails) ? (String) feeDetails.get("rejectMsg") : null;
-        // making GV+charges validation configurable
-        String feeRateCode = (null != feeDetails) ? (String) feeDetails.get("feeRateCode") : null;
-        boolean isAddMoneyPcfEnabled = isAddMoneyPcfEnabled(orderDetail.getMid(), userDetails.getUserId(), feeRateCode);
-
-        Boolean gvPlusChargesAllowedOnCc = Boolean.parseBoolean(ConfigurationUtil.getProperty(
-
-        "gv.plus.charges.allowed.on.cc", "true"));
-
-        if (StringUtils.isNotEmpty(errorMessage)) {
-
-            if (!gvPlusChargesAllowedOnCc
-                    || (!isAddMoneyPcfEnabled && ff4jUtils.isFeatureEnabledOnMid(orderDetail.getMid(),
-                            TheiaConstant.FF4J.THEIA_ENABLE_ADD_MONEY_WALLET_LIMIT, false))) {
-                throwRiskRejectException(errorMessage, txnToken, orderDetail);
-            }
-
-        }
-    }
+    // private void
+    // validateFeeForAddMoneyForEnhanceAndTopUps(BizWalletConsultResponse
+    // walletConsultResponse,
+    // String txnToken, HttpServletRequest request,
+    // InitiateTransactionRequestBody orderDetail, String payMode,
+    // UserDetailsBiz userDetails) {
+    // Map<String, Object> feeDetails =
+    // getFeeDetailIfUserRisky(walletConsultResponse, payMode);
+    // String errorMessage = (null != feeDetails) ? (String)
+    // feeDetails.get("rejectMsg") : null;
+    // // making GV+charges validation configurable
+    // String feeRateCode = (null != feeDetails) ? (String)
+    // feeDetails.get("feeRateCode") : null;
+    // boolean isAddMoneyPcfEnabled = isAddMoneyPcfEnabled(orderDetail.getMid(),
+    // userDetails.getUserId(), feeRateCode);
+    //
+    // Boolean gvPlusChargesAllowedOnCc =
+    // Boolean.parseBoolean(ConfigurationUtil.getProperty(
+    //
+    // "gv.plus.charges.allowed.on.cc", "true"));
+    //
+    // if (StringUtils.isNotEmpty(errorMessage)) {
+    //
+    // if (!gvPlusChargesAllowedOnCc
+    // || (!isAddMoneyPcfEnabled &&
+    // ff4jUtils.isFeatureEnabledOnMid(orderDetail.getMid(),
+    // TheiaConstant.FF4J.THEIA_ENABLE_ADD_MONEY_WALLET_LIMIT, false))) {
+    // throwRiskRejectException(errorMessage, txnToken, orderDetail);
+    // }
+    //
+    // }
+    // }
 
     private boolean isAddMoneyPcfEnabled(String mid, String userId, String feeRateCode) {
         if (StringUtils.isNotEmpty(feeRateCode)

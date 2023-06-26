@@ -27,7 +27,8 @@ public interface IConfigurationDataService {
 
     PaytmDefaultValuesData getPaytmDefaultValues(String fieldName);
 
-    Optional<List<PaytmDefaultValuesData>> getPaytmDefaultValues(List<String> fieldNameList);
+    // Optional<List<PaytmDefaultValuesData>> getPaytmDefaultValues(List<String>
+    // fieldNameList);
 
     EntityIgnoreParamsDataResponse getEntityIgnoreParams(String entityId);
 
