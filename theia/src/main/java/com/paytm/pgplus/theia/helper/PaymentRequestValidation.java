@@ -5,7 +5,7 @@ package com.paytm.pgplus.theia.helper;
 
 import java.util.*;
 
-import com.paytm.pgplus.theia.enums.TransactionMode;
+//import com.paytm.pgplus.theia.enums.TransactionMode;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -66,84 +66,102 @@ public class PaymentRequestValidation {
     @Qualifier("cardUtils")
     private CardUtils cardUtils;
 
-    public void prepareCardRequest(final TheiaPaymentRequest theiaPaymentRequest,
-            final EntityPaymentOptionsTO entityPaymentOptions, CashierWorkflow cashierWorkflow,
-            final CashierRequestBuilder cashierRequestBuilder, CardInfo cardInfo, PaymentRequest paymentRequest)
-            throws PaytmValidationException {
-        CardRequest cardRequest;
-
-        if ((cashierWorkflow == CashierWorkflow.ISOCARD) || (cashierWorkflow == CashierWorkflow.ADD_MONEY_ISOCARD)) {
-            BinDetail binDetail;
-
-            try {
-                cardRequest = theiaCashierMapper.prepareCardRequest(cardInfo, theiaPaymentRequest);
-            } catch (CashierCheckedException e) {
-                throw new TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
-            }
-
-            if (StringUtils.isBlank(theiaPaymentRequest.getSavedCardId())) {
-                binDetail = validateAndBuildBinForBankCard(theiaPaymentRequest, entityPaymentOptions);
-            } else {
-                /** Saved card request */
-                if (cardRequest.getSavedCardRequest() == null) {
-                    throw new TheiaServiceException("SYSTEM_ERROR : Unable to process the request");
-                }
-
-                binDetail = validateAndBuildBinForSavedCard(theiaPaymentRequest, cardInfo, cardRequest);
-            }
-
-            if (binDetail.getIsIndian()) {
-                paymentRequest.getPayBillOptions().setIssuingCountry(SupportRegion.IN.name());
-            } else {
-                validateInternationalCard(entityPaymentOptions, binDetail.getCardName(),
-                        theiaPaymentRequest.getTxnMode(), false);
-                paymentRequest.getPayBillOptions().setIssuingCountry(SupportRegion.INTL.name());
-                cardRequest.setInternationalCard(true);
-                // to support international payment
-                paymentRequest.getPayBillOptions().getChannelInfo()
-                        .put(INTERNATIONAL_PAYMENT_KEY, SupportRegion.INTL.name());
-            }
-
-            /** Check for the direct payment option */
-            checkForSeamlesstBankCardPaymentGateWay(entityPaymentOptions, cashierRequestBuilder, paymentRequest,
-                    binDetail, theiaPaymentRequest);
-
-            try {
-                cashierRequestBuilder.setBinCardRequest(new BinCardRequest(binDetail));
-                cashierRequestBuilder.setCardRequest(cardRequest);
-                cashierRequestBuilder.setPaymentRequest(paymentRequest);
-            } catch (CashierCheckedException e) {
-                throw new TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
-            }
-        } else if ((cashierWorkflow == CashierWorkflow.IMPS) || (cashierWorkflow == CashierWorkflow.ADD_MONEY_IMPS)) {
-
-            /** Add IMPS Validations Here */
-            cardUtils.validateIMPSCardRequest(theiaPaymentRequest.getSavedCardId(), theiaPaymentRequest.getMmid(),
-                    theiaPaymentRequest.getOtp(), theiaPaymentRequest.getHolderMobileNo());
-
-            try {
-                cardRequest = theiaCashierMapper.preapreImpsCardRequest(theiaPaymentRequest);
-                cashierRequestBuilder.setCardRequest(cardRequest);
-            } catch (CashierCheckedException e) {
-                throw new TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
-            }
-        } else if ((cashierWorkflow == cashierWorkflow.UPI) || (cashierWorkflow == CashierWorkflow.ADD_MONEY_UPI)) {
-            try {
-                LOGGER.debug("CardInfo : {} ", cardInfo);
-                cardRequest = theiaCashierMapper.prepareUPIRequest(theiaPaymentRequest);
-                LOGGER.debug("CardRequest : {} ", cardRequest);
-
-                if (cardInfo != null && cardInfo.getMerchantViewSavedCardsList() != null
-                        && !cardInfo.getMerchantViewSavedCardsList().isEmpty() && cardRequest != null) {
-                    cardRequest.setMerchantViewSavedCardsList(cardInfo.getMerchantViewSavedCardsList());
-                }
-
-                cashierRequestBuilder.setCardRequest(cardRequest);
-            } catch (CashierCheckedException e) {
-                throw new TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
-            }
-        }
-    }
+    // public void prepareCardRequest(final TheiaPaymentRequest
+    // theiaPaymentRequest,
+    // final EntityPaymentOptionsTO entityPaymentOptions, CashierWorkflow
+    // cashierWorkflow,
+    // final CashierRequestBuilder cashierRequestBuilder, CardInfo cardInfo,
+    // PaymentRequest paymentRequest)
+    // throws PaytmValidationException {
+    // CardRequest cardRequest;
+    //
+    // if ((cashierWorkflow == CashierWorkflow.ISOCARD) || (cashierWorkflow ==
+    // CashierWorkflow.ADD_MONEY_ISOCARD)) {
+    // BinDetail binDetail;
+    //
+    // try {
+    // cardRequest = theiaCashierMapper.prepareCardRequest(cardInfo,
+    // theiaPaymentRequest);
+    // } catch (CashierCheckedException e) {
+    // throw new
+    // TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
+    // }
+    //
+    // if (StringUtils.isBlank(theiaPaymentRequest.getSavedCardId())) {
+    // binDetail = validateAndBuildBinForBankCard(theiaPaymentRequest,
+    // entityPaymentOptions);
+    // } else {
+    // /** Saved card request */
+    // if (cardRequest.getSavedCardRequest() == null) {
+    // throw new
+    // TheiaServiceException("SYSTEM_ERROR : Unable to process the request");
+    // }
+    //
+    // binDetail = validateAndBuildBinForSavedCard(theiaPaymentRequest,
+    // cardInfo, cardRequest);
+    // }
+    //
+    // if (binDetail.getIsIndian()) {
+    // paymentRequest.getPayBillOptions().setIssuingCountry(SupportRegion.IN.name());
+    // } else {
+    // validateInternationalCard(entityPaymentOptions, binDetail.getCardName(),
+    // theiaPaymentRequest.getTxnMode(), false);
+    // paymentRequest.getPayBillOptions().setIssuingCountry(SupportRegion.INTL.name());
+    // cardRequest.setInternationalCard(true);
+    // // to support international payment
+    // paymentRequest.getPayBillOptions().getChannelInfo()
+    // .put(INTERNATIONAL_PAYMENT_KEY, SupportRegion.INTL.name());
+    // }
+    //
+    // /** Check for the direct payment option */
+    // checkForSeamlesstBankCardPaymentGateWay(entityPaymentOptions,
+    // cashierRequestBuilder, paymentRequest,
+    // binDetail, theiaPaymentRequest);
+    //
+    // try {
+    // cashierRequestBuilder.setBinCardRequest(new BinCardRequest(binDetail));
+    // cashierRequestBuilder.setCardRequest(cardRequest);
+    // cashierRequestBuilder.setPaymentRequest(paymentRequest);
+    // } catch (CashierCheckedException e) {
+    // throw new
+    // TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
+    // }
+    // } else if ((cashierWorkflow == CashierWorkflow.IMPS) || (cashierWorkflow
+    // == CashierWorkflow.ADD_MONEY_IMPS)) {
+    //
+    // /** Add IMPS Validations Here */
+    // cardUtils.validateIMPSCardRequest(theiaPaymentRequest.getSavedCardId(),
+    // theiaPaymentRequest.getMmid(),
+    // theiaPaymentRequest.getOtp(), theiaPaymentRequest.getHolderMobileNo());
+    //
+    // try {
+    // cardRequest =
+    // theiaCashierMapper.preapreImpsCardRequest(theiaPaymentRequest);
+    // cashierRequestBuilder.setCardRequest(cardRequest);
+    // } catch (CashierCheckedException e) {
+    // throw new
+    // TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
+    // }
+    // } else if ((cashierWorkflow == cashierWorkflow.UPI) || (cashierWorkflow
+    // == CashierWorkflow.ADD_MONEY_UPI)) {
+    // try {
+    // LOGGER.debug("CardInfo : {} ", cardInfo);
+    // cardRequest = theiaCashierMapper.prepareUPIRequest(theiaPaymentRequest);
+    // LOGGER.debug("CardRequest : {} ", cardRequest);
+    //
+    // if (cardInfo != null && cardInfo.getMerchantViewSavedCardsList() != null
+    // && !cardInfo.getMerchantViewSavedCardsList().isEmpty() && cardRequest !=
+    // null) {
+    // cardRequest.setMerchantViewSavedCardsList(cardInfo.getMerchantViewSavedCardsList());
+    // }
+    //
+    // cashierRequestBuilder.setCardRequest(cardRequest);
+    // } catch (CashierCheckedException e) {
+    // throw new
+    // TheiaServiceException("SYSTEM_ERROR : UNABLE TO PROCESS THE REQUEST", e);
+    // }
+    // }
+    // }
 
     private BinDetail validateAndBuildBinForSavedCard(final TheiaPaymentRequest theiaPaymentRequest, CardInfo cardInfo,
             final CardRequest cardRequest) throws PaytmValidationException {
@@ -248,38 +266,35 @@ public class PaymentRequestValidation {
         }
     }
 
-    /**
-     * @param entityPaymentOptions
-     * @param cardScheme
-     * @param txnMode
-     * @return
-     * @throws PaytmValidationException
-     */
-    public void validateInternationalCard(final EntityPaymentOptionsTO entityPaymentOptions, String cardScheme,
-            String txnMode, boolean isSavedCard) throws PaytmValidationException {
-        List<BankInfo> channelList;
-        if (TransactionMode.CC.getMode().equals(txnMode)) {
-            channelList = entityPaymentOptions.getCompleteCcList();
-        } else {
-            channelList = entityPaymentOptions.getCompleteDcList();
-        }
-        if (CollectionUtils.isNotEmpty(channelList)) {
-            BankInfo channelInfo = null;
-            for (BankInfo bankInfo : channelList) {
-                if (bankInfo.getBankName().equals(cardScheme)) {
-                    channelInfo = bankInfo;
-                    break;
-                }
-            }
-
-            if ((channelInfo != null) && !channelInfo.getSupportCountries().contains(SupportRegion.INTL.name())) {
-                if (!isSavedCard) {
-                    throw new PaytmValidationException(PaytmValidationExceptionType.INVALID_INTERNATIONAL_CARD);
-                }
-                throw new PaytmValidationException(PaytmValidationExceptionType.INVALID_PAYMODE_INTL_CARD);
-            }
-        }
-    }
+    // public void validateInternationalCard(final EntityPaymentOptionsTO
+    // entityPaymentOptions, String cardScheme,
+    // String txnMode, boolean isSavedCard) throws PaytmValidationException {
+    // List<BankInfo> channelList;
+    // if (TransactionMode.CC.getMode().equals(txnMode)) {
+    // channelList = entityPaymentOptions.getCompleteCcList();
+    // } else {
+    // channelList = entityPaymentOptions.getCompleteDcList();
+    // }
+    // if (CollectionUtils.isNotEmpty(channelList)) {
+    // BankInfo channelInfo = null;
+    // for (BankInfo bankInfo : channelList) {
+    // if (bankInfo.getBankName().equals(cardScheme)) {
+    // channelInfo = bankInfo;
+    // break;
+    // }
+    // }
+    //
+    // if ((channelInfo != null) &&
+    // !channelInfo.getSupportCountries().contains(SupportRegion.INTL.name())) {
+    // if (!isSavedCard) {
+    // throw new
+    // PaytmValidationException(PaytmValidationExceptionType.INVALID_INTERNATIONAL_CARD);
+    // }
+    // throw new
+    // PaytmValidationException(PaytmValidationExceptionType.INVALID_PAYMODE_INTL_CARD);
+    // }
+    // }
+    // }
 
     private void validateSavedCardCvv(final SavedCardRequest saveCardRequest) throws PaytmValidationException {
 

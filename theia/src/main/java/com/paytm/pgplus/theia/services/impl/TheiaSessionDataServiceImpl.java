@@ -18,7 +18,7 @@ import com.paytm.pgplus.theia.cache.IMerchantPreferenceService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.constants.TheiaConstant.RequestParams;
 import com.paytm.pgplus.theia.constants.TheiaConstant.SessionDataAttributes;
-import com.paytm.pgplus.theia.enums.EnumChannel;
+//import com.paytm.pgplus.theia.enums.EnumChannel;
 import com.paytm.pgplus.theia.exceptions.TheiaServiceException;
 import com.paytm.pgplus.theia.helper.PreRedisCacheHelper;
 import com.paytm.pgplus.theia.services.AbstractSessionDataService;
@@ -299,45 +299,50 @@ public class TheiaSessionDataServiceImpl extends AbstractSessionDataService impl
         return cardInfo;
     }
 
-    @Override
-    public ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request) {
-        HttpSession session = request.getSession();
-
-        if (session == null) {
-            throw new TheiaServiceException("ThemeInfo for Set/Get does not available due to the session not exist");
-        }
-
-        Object themeInSession = session.getAttribute(SessionDataAttributes.themeInfo.name());
-        if (null != themeInSession) {
-            return (ThemeInfo) themeInSession;
-        }
-
-        ThemeInfo themeInfo = new ThemeInfo();
-
-        // Set channel
-        setChannel(request, themeInfo);
-
-        String mid = getAttributeOrParameter(request, RequestParams.MID);
-
-        if (ConfigurationUtil.getProperty(TheiaConstant.PaytmPropertyConstants.MERCHANT_THEME_LB_FLAG).equals("true")
-                && isThemeLBEnabledForMerchant(mid)) {
-            prepareAndSetTheme(merchantThemeLoadBalancer.getTheme(getChannel(request, false), mid), themeInfo);
-        } else {
-            // Set Theme and Sub theme
-            prepareAndSetTheme(getAttributeOrParameter(request, RequestParams.THEME), themeInfo);
-
-            // This method call is required to override the request theme with a
-            // configured value for the merchant
-            overrideThemeIfRequired(mid, themeInfo);
-
-            updateWithCustomTheme(themeInfo);
-        }
-
-        session.setAttribute(SessionDataAttributes.themeInfo.name(), themeInfo);
-
-        LOGGER.debug("Final ThemeInfo : {}", themeInfo);
-        return themeInfo;
-    }
+    // @Override
+    // public ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request) {
+    // HttpSession session = request.getSession();
+    //
+    // if (session == null) {
+    // throw new
+    // TheiaServiceException("ThemeInfo for Set/Get does not available due to the session not exist");
+    // }
+    //
+    // Object themeInSession =
+    // session.getAttribute(SessionDataAttributes.themeInfo.name());
+    // if (null != themeInSession) {
+    // return (ThemeInfo) themeInSession;
+    // }
+    //
+    // ThemeInfo themeInfo = new ThemeInfo();
+    //
+    // // Set channel
+    // setChannel(request, themeInfo);
+    //
+    // String mid = getAttributeOrParameter(request, RequestParams.MID);
+    //
+    // if
+    // (ConfigurationUtil.getProperty(TheiaConstant.PaytmPropertyConstants.MERCHANT_THEME_LB_FLAG).equals("true")
+    // && isThemeLBEnabledForMerchant(mid)) {
+    // prepareAndSetTheme(merchantThemeLoadBalancer.getTheme(getChannel(request,
+    // false), mid), themeInfo);
+    // } else {
+    // // Set Theme and Sub theme
+    // prepareAndSetTheme(getAttributeOrParameter(request, RequestParams.THEME),
+    // themeInfo);
+    //
+    // // This method call is required to override the request theme with a
+    // // configured value for the merchant
+    // overrideThemeIfRequired(mid, themeInfo);
+    //
+    // updateWithCustomTheme(themeInfo);
+    // }
+    //
+    // session.setAttribute(SessionDataAttributes.themeInfo.name(), themeInfo);
+    //
+    // LOGGER.debug("Final ThemeInfo : {}", themeInfo);
+    // return themeInfo;
+    // }
 
     private boolean isThemeLBEnabledForMerchant(String mid) {
         String[] merchantIds = ConfigurationUtil.getProperty(
@@ -546,28 +551,25 @@ public class TheiaSessionDataServiceImpl extends AbstractSessionDataService impl
         }
     }
 
-    /**
-     * @param viewInfo
-     */
-    private void updateWithCustomTheme(ThemeInfo viewInfo) {
-
-        switch (viewInfo.getTheme()) {
-        case "airtelLow":
-            viewInfo.setTheme("paytmLow");
-            break;
-        case "merchant":
-        case "merchant2":
-        case "merchant3":
-        case "merchant5":
-            if (StringUtils.equals(viewInfo.getChannel(), EnumChannel.WAP.name())) {
-                viewInfo.setChannel(EnumChannel.WEB.name());
-            }
-            break;
-        case "javas":
-            viewInfo.setTheme("merchantLow");
-            break;
-        }
-    }
+    // private void updateWithCustomTheme(ThemeInfo viewInfo) {
+    //
+    // switch (viewInfo.getTheme()) {
+    // case "airtelLow":
+    // viewInfo.setTheme("paytmLow");
+    // break;
+    // case "merchant":
+    // case "merchant2":
+    // case "merchant3":
+    // case "merchant5":
+    // if (StringUtils.equals(viewInfo.getChannel(), EnumChannel.WAP.name())) {
+    // viewInfo.setChannel(EnumChannel.WEB.name());
+    // }
+    // break;
+    // case "javas":
+    // viewInfo.setTheme("merchantLow");
+    // break;
+    // }
+    // }
 
     @Override
     public boolean isUPIAccepted(HttpServletRequest request) {

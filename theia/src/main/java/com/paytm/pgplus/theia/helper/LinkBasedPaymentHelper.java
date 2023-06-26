@@ -11,7 +11,7 @@ import com.paytm.pgplus.facade.linkService.services.impl.LinkService;
 import com.paytm.pgplus.facade.user.models.request.*;
 import com.paytm.pgplus.theia.cache.IConfigurationDataService;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
-import com.paytm.pgplus.theia.enums.ESmsTemplate;
+//import com.paytm.pgplus.theia.enums.ESmsTemplate;
 import com.paytm.pgplus.theia.offline.enums.ResultCode;
 import com.paytm.pgplus.theia.offline.exceptions.RequestValidationException;
 import org.apache.commons.lang.StringUtils;
@@ -130,51 +130,63 @@ public class LinkBasedPaymentHelper {
         }
     }
 
-    public GenerateSendOtpRequest generateSendOTPRequest(SendOtpRequest request) {
+    // public GenerateSendOtpRequest generateSendOTPRequest(SendOtpRequest
+    // request) {
+    //
+    // String clientId =
+    // configurationDataService.getPaytmPropertyValue(TheiaConstant.ExtraConstants.OAUTH_CLIENT_ID);
+    // String secretKey = configurationDataService
+    // .getPaytmPropertyValue(TheiaConstant.ExtraConstants.OAUTH_CLIENT_SECRET_KEY);
+    // String loginId = request.getMobileNumber();
+    // GenerateSendOtpRequest generateSendOtpRequest = new
+    // GenerateSendOtpRequest(clientId, secretKey, loginId,
+    // SIGN_IN_OTP_SCOPE, OAUTH_ACTION_TYPE_REGISTER, null,
+    // OAUTH_EVALUATION_TYPE_OAUTH_LOGIN,
+    // request.getUniqueId());
+    // String otpSmsText = getOtpMessage(request, generateSendOtpRequest);
+    // generateSendOtpRequest.setOtpSmsText(otpSmsText);
+    // LOGGER.info("Generate Send OTP request received for MID = {}, for mobile no {}",
+    // request.getMid(),
+    // StringUtils.overlay(loginId, "****", 0, 4));
+    // return generateSendOtpRequest;
+    // }
 
-        String clientId = configurationDataService.getPaytmPropertyValue(TheiaConstant.ExtraConstants.OAUTH_CLIENT_ID);
-        String secretKey = configurationDataService
-                .getPaytmPropertyValue(TheiaConstant.ExtraConstants.OAUTH_CLIENT_SECRET_KEY);
-        String loginId = request.getMobileNumber();
-        GenerateSendOtpRequest generateSendOtpRequest = new GenerateSendOtpRequest(clientId, secretKey, loginId,
-                SIGN_IN_OTP_SCOPE, OAUTH_ACTION_TYPE_REGISTER, null, OAUTH_EVALUATION_TYPE_OAUTH_LOGIN,
-                request.getUniqueId());
-        String otpSmsText = getOtpMessage(request, generateSendOtpRequest);
-        generateSendOtpRequest.setOtpSmsText(otpSmsText);
-        LOGGER.info("Generate Send OTP request received for MID = {}, for mobile no {}", request.getMid(),
-                StringUtils.overlay(loginId, "****", 0, 4));
-        return generateSendOtpRequest;
-    }
-
-    private String getOtpMessage(SendOtpRequest request, GenerateSendOtpRequest generateSendOtpRequest) {
-        ESmsTemplate smsTemplate = ESmsTemplate.withDefault(ESmsTemplate.LINK_LOGIN_OTP,
-                ESmsTemplate.LINK_DEFAULT_MESSAGE);
-        if (ff4jUtils.isFeatureEnabledOnMid(request.getMid(), FEATURE_SEND_OTP_V5, false)) {
-            String templateId = smsTemplate.getTemplateId();
-            String entityId = ESmsTemplate.getEntityId();
-            String smsSenderId = ESmsTemplate.getSmsSenderId();
-            LOGGER.info("parameters for v5/sendOtp, templateId : {}, entityId : {}, senderId : {}", templateId,
-                    entityId, smsSenderId);
-            generateSendOtpRequest.setTemplateId(templateId);
-            generateSendOtpRequest.setEntityId(entityId);
-            generateSendOtpRequest.setSmsSenderId(smsSenderId);
-        }
-        String otpSmsText = smsTemplate.getMessage();
-        if (StringUtils.isNotBlank(otpSmsText)) {
-            if (StringUtils.isNotBlank(request.getTxnAmount())) {
-                otpSmsText = otpSmsText.replace(TXN_AMT, "Rs. " + request.getTxnAmount() + " to ");
-            } else {
-                otpSmsText = otpSmsText.replace(TXN_AMT, "");
-            }
-            otpSmsText = otpSmsText.replace(MERCHANT_NAME, request.getMerchantName());
-            if (StringUtils.isNotBlank(request.getTxnDiscription())) {
-                otpSmsText = otpSmsText.replace(TXN_DISCRIPTION, " for " + trimLength(request.getTxnDiscription(), 30));
-            } else {
-                otpSmsText = otpSmsText.replace(TXN_DISCRIPTION, "");
-            }
-        }
-        return otpSmsText;
-    }
+    // private String getOtpMessage(SendOtpRequest request,
+    // GenerateSendOtpRequest generateSendOtpRequest) {
+    // ESmsTemplate smsTemplate =
+    // ESmsTemplate.withDefault(ESmsTemplate.LINK_LOGIN_OTP,
+    // ESmsTemplate.LINK_DEFAULT_MESSAGE);
+    // if (ff4jUtils.isFeatureEnabledOnMid(request.getMid(),
+    // FEATURE_SEND_OTP_V5, false)) {
+    // String templateId = smsTemplate.getTemplateId();
+    // String entityId = ESmsTemplate.getEntityId();
+    // String smsSenderId = ESmsTemplate.getSmsSenderId();
+    // LOGGER.info("parameters for v5/sendOtp, templateId : {}, entityId : {}, senderId : {}",
+    // templateId,
+    // entityId, smsSenderId);
+    // generateSendOtpRequest.setTemplateId(templateId);
+    // generateSendOtpRequest.setEntityId(entityId);
+    // generateSendOtpRequest.setSmsSenderId(smsSenderId);
+    // }
+    // String otpSmsText = smsTemplate.getMessage();
+    // if (StringUtils.isNotBlank(otpSmsText)) {
+    // if (StringUtils.isNotBlank(request.getTxnAmount())) {
+    // otpSmsText = otpSmsText.replace(TXN_AMT, "Rs. " + request.getTxnAmount()
+    // + " to ");
+    // } else {
+    // otpSmsText = otpSmsText.replace(TXN_AMT, "");
+    // }
+    // otpSmsText = otpSmsText.replace(MERCHANT_NAME,
+    // request.getMerchantName());
+    // if (StringUtils.isNotBlank(request.getTxnDiscription())) {
+    // otpSmsText = otpSmsText.replace(TXN_DISCRIPTION, " for " +
+    // trimLength(request.getTxnDiscription(), 30));
+    // } else {
+    // otpSmsText = otpSmsText.replace(TXN_DISCRIPTION, "");
+    // }
+    // }
+    // return otpSmsText;
+    // }
 
     private String trimLength(String text, int targetLength) {
         if (StringUtils.isNotBlank(text) && text.length() > targetLength) {

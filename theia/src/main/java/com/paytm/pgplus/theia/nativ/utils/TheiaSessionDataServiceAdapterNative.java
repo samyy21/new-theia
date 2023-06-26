@@ -28,10 +28,10 @@ public class TheiaSessionDataServiceAdapterNative implements ITheiaSessionDataSe
     @Autowired
     private NativeSessionUtil nativeSessionUtil;
 
-    @Override
-    public ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request) {
-        throw new UnsupportedOperationException();
-    }
+    // @Override
+    // public ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request) {
+    // throw new UnsupportedOperationException();
+    // }
 
     @Override
     public ThemeInfo getThemeInfoFromSession(HttpServletRequest request) {

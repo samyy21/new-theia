@@ -20,7 +20,7 @@ import java.util.Set;
  * @author kesari
  */
 public interface ITheiaSessionDataService extends Serializable {
-    ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request);
+    // ThemeInfo setAndGetThemeInfoInSesion(HttpServletRequest request);
 
     ThemeInfo getThemeInfoFromSession(HttpServletRequest request);
 

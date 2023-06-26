@@ -60,34 +60,36 @@ public class TheiaViewResolverServiceImpl implements ITheiaViewResolverService {
         return ViewNames.OOPS_PAGE;
     }
 
-    @Override
-    public String returnErrorPage(HttpServletRequest request) {
-        String viewName = ViewNames.ERROR_PAGE;
-        if (stagingParamValidator.isCustomPageEnabledForURL(request.getServerName())) {
-            viewName = ViewNames.STAGE_OOPS_PAGE;
-        }
-        return TheiaConstant.RetryConstants.JSP_PATH + viewName + ".jsp";
-    }
+    // @Override
+    // public String returnErrorPage(HttpServletRequest request) {
+    // String viewName = ViewNames.ERROR_PAGE;
+    // if
+    // (stagingParamValidator.isCustomPageEnabledForURL(request.getServerName()))
+    // {
+    // viewName = ViewNames.STAGE_OOPS_PAGE;
+    // }
+    // return TheiaConstant.RetryConstants.JSP_PATH + viewName + ".jsp";
+    // }
 
-    @Override
-    public String returnConfirmationPage(HttpServletRequest request) {
-        return ViewNames.CONFIRMATION_PAGE;
-    }
+    // @Override
+    // public String returnConfirmationPage(HttpServletRequest request) {
+    // return ViewNames.CONFIRMATION_PAGE;
+    // }
 
-    @Override
-    public String returnOAuthRedirectErrorPage(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            LOGGER.info("sessionInvalidating");
-            session.invalidate();
-        }
-        return ViewNames.OAUTH_ERROR;
-    }
+    // @Override
+    // public String returnOAuthRedirectErrorPage(HttpServletRequest request) {
+    // HttpSession session = request.getSession(false);
+    // if (session != null) {
+    // LOGGER.info("sessionInvalidating");
+    // session.invalidate();
+    // }
+    // return ViewNames.OAUTH_ERROR;
+    // }
 
-    @Override
-    public String returnOauthLoginRedirectPage() {
-        return ViewNames.OAUTH_DONE;
-    }
+    // @Override
+    // public String returnOauthLoginRedirectPage() {
+    // return ViewNames.OAUTH_DONE;
+    // }
 
     @Override
     public String returnLinkPaymentStatusPage(HttpServletRequest request) {
@@ -109,87 +111,97 @@ public class TheiaViewResolverServiceImpl implements ITheiaViewResolverService {
         return ViewNames.NATIVE_KYC_JSP;
     }
 
-    @Override
-    public String returnKYCPage() {
-        return ViewNames.KYC_USER_PAGE;
-    }
+    // @Override
+    // public String returnKYCPage() {
+    // return ViewNames.KYC_USER_PAGE;
+    // }
+    //
+    // @Override
+    // public String returnScanAndPayTimeout(HttpServletRequest request) {
+    // return ViewNames.SCAN_PAY_TIMEOUT;
+    // }
 
-    @Override
-    public String returnScanAndPayTimeout(HttpServletRequest request) {
-        return ViewNames.SCAN_PAY_TIMEOUT;
-    }
+    // @Override
+    // public String returnPaymentPage(final HttpServletRequest request) {
+    // String paymentPageToOpen = ViewNames.PAYMENT_PAGE;
+    // String requestType =
+    // request.getParameter(TheiaConstant.RequestParams.REQUEST_TYPE);
+    // if (StringUtils.isBlank(requestType)) {
+    // requestType =
+    // request.getAttribute(TheiaConstant.RequestParams.REQUEST_TYPE) != null ?
+    // request
+    // .getAttribute(TheiaConstant.RequestParams.REQUEST_TYPE).toString() :
+    // null;
+    // }
+    //
+    // if (TheiaConstant.RequestTypes.SUBSCRIPTION.equalsIgnoreCase(requestType)
+    // || (theiaSessionDataService.getTxnInfoFromSession(request) != null &&
+    // TheiaConstant.RequestTypes.SUBSCRIPTION
+    // .equalsIgnoreCase(theiaSessionDataService.getTxnInfoFromSession(request).getRequestType())))
+    // {
+    // paymentPageToOpen = ViewNames.SUBSCRIPTION_PAGE;
+    // }
+    // String paymentPagePath = new
+    // StringBuilder(getThemePath(request)).append(paymentPageToOpen).toString();
+    // LOGGER.info("Theme Generated is : {} ", paymentPagePath);
+    // theiaResponseGenerator.pushPtcResultStatusToStatsD(SUCCESS_RESULT_STATUS);
+    // return paymentPagePath;
+    // }
 
-    @Override
-    public String returnPaymentPage(final HttpServletRequest request) {
-        String paymentPageToOpen = ViewNames.PAYMENT_PAGE;
-        String requestType = request.getParameter(TheiaConstant.RequestParams.REQUEST_TYPE);
-        if (StringUtils.isBlank(requestType)) {
-            requestType = request.getAttribute(TheiaConstant.RequestParams.REQUEST_TYPE) != null ? request
-                    .getAttribute(TheiaConstant.RequestParams.REQUEST_TYPE).toString() : null;
-        }
+    // @Override
+    // public String returnRiskPaymentPage(final HttpServletRequest request) {
+    // ThemeInfo themeInfo =
+    // theiaSessionDataService.getThemeInfoFromSession(request);
+    // String channelId = themeInfo.getChannel();
+    //
+    // if (channelId.equals("WEB")) {
+    // return ViewNames.RISK_PAYMENT_PAGE_WEB;
+    // }
+    // return ViewNames.RISK_PAYMENNT_PAGE_WAP;
+    // }
 
-        if (TheiaConstant.RequestTypes.SUBSCRIPTION.equalsIgnoreCase(requestType)
-                || (theiaSessionDataService.getTxnInfoFromSession(request) != null && TheiaConstant.RequestTypes.SUBSCRIPTION
-                        .equalsIgnoreCase(theiaSessionDataService.getTxnInfoFromSession(request).getRequestType()))) {
-            paymentPageToOpen = ViewNames.SUBSCRIPTION_PAGE;
-        }
-        String paymentPagePath = new StringBuilder(getThemePath(request)).append(paymentPageToOpen).toString();
-        LOGGER.info("Theme Generated is : {} ", paymentPagePath);
-        theiaResponseGenerator.pushPtcResultStatusToStatsD(SUCCESS_RESULT_STATUS);
-        return paymentPagePath;
-    }
+    // @Override
+    // public String returnOAuthPage(final HttpServletRequest request) {
+    // return new
+    // StringBuilder(getThemePath(request)).append(ViewNames.OAUTH_DONE).toString();
+    // }
 
-    @Override
-    public String returnRiskPaymentPage(final HttpServletRequest request) {
-        ThemeInfo themeInfo = theiaSessionDataService.getThemeInfoFromSession(request);
-        String channelId = themeInfo.getChannel();
-
-        if (channelId.equals("WEB")) {
-            return ViewNames.RISK_PAYMENT_PAGE_WEB;
-        }
-        return ViewNames.RISK_PAYMENNT_PAGE_WAP;
-    }
-
-    @Override
-    public String returnOAuthPage(final HttpServletRequest request) {
-        return new StringBuilder(getThemePath(request)).append(ViewNames.OAUTH_DONE).toString();
-    }
-
-    @Override
-    public String returnNpciReqPage() {
-        return ViewNames.NPCI_REQ_PAGE;
-    }
-
-    @Override
-    public String returnNpciResPage() {
-        return ViewNames.NPCI_RESP_PAGE;
-    }
-
-    @Override
-    public String returnCheckOutJsPage() {
-        return ViewNames.CHECKOUT_JS_PAGE;
-    }
-
-    private String getThemePath(final HttpServletRequest request) {
-        final StringBuilder themePath = new StringBuilder("");
-        if (request == null) {
-            LOGGER.warn("Invalid request or session found, Either request or session is null.");
-            return themePath.toString();
-        }
-
-        ThemeInfo viewInfo = theiaSessionDataService.setAndGetThemeInfoInSesion(request);
-        LOGGER.debug("Fetched session theme data : {}", viewInfo);
-
-        // Prepare theme Path
-        if (viewInfo != null && StringUtils.isNotBlank(viewInfo.getChannel())) {
-            themePath.append(viewInfo.getChannel().toLowerCase()).append(ViewNames.PATH_SEPARATOR);
-        }
-        if (viewInfo != null && StringUtils.isNotBlank(viewInfo.getTheme())) {
-            themePath.append(viewInfo.getTheme()).append(ViewNames.PATH_SEPARATOR);
-        }
-        LOGGER.debug("Theme path :{}", themePath);
-        return themePath.toString();
-    }
+    // @Override
+    // public String returnNpciReqPage() {
+    // return ViewNames.NPCI_REQ_PAGE;
+    // }
+    //
+    // @Override
+    // public String returnNpciResPage() {
+    // return ViewNames.NPCI_RESP_PAGE;
+    // }
+    //
+    // @Override
+    // public String returnCheckOutJsPage() {
+    // return ViewNames.CHECKOUT_JS_PAGE;
+    // }
+    //
+    // private String getThemePath(final HttpServletRequest request) {
+    // final StringBuilder themePath = new StringBuilder("");
+    // if (request == null) {
+    // LOGGER.warn("Invalid request or session found, Either request or session is null.");
+    // return themePath.toString();
+    // }
+    //
+    // ThemeInfo viewInfo =
+    // theiaSessionDataService.setAndGetThemeInfoInSesion(request);
+    // LOGGER.debug("Fetched session theme data : {}", viewInfo);
+    //
+    // // Prepare theme Path
+    // if (viewInfo != null && StringUtils.isNotBlank(viewInfo.getChannel())) {
+    // themePath.append(viewInfo.getChannel().toLowerCase()).append(ViewNames.PATH_SEPARATOR);
+    // }
+    // if (viewInfo != null && StringUtils.isNotBlank(viewInfo.getTheme())) {
+    // themePath.append(viewInfo.getTheme()).append(ViewNames.PATH_SEPARATOR);
+    // }
+    // LOGGER.debug("Theme path :{}", themePath);
+    // return themePath.toString();
+    // }
 
     private void logMerchantResponseOOps(HttpServletRequest request) {
 
