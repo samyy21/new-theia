@@ -16,10 +16,10 @@ http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
 		<listener-class>org.springframework.web.context.ContextLoaderListener
 		</listener-class>
 	</listener>
-	<listener>
-		<listener-class>com.paytm.pgplus.theia.listeners.TheiaContextListener
-		</listener-class>
-	</listener>
+<!--	<listener>-->
+<!--		<listener-class>com.paytm.pgplus.theia.listeners.TheiaContextListener-->
+<!--		</listener-class>-->
+<!--	</listener>-->
 
 	<filter>
 		<filter-name>apiLogger</filter-name>
