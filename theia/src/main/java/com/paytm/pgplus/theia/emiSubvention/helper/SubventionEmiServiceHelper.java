@@ -38,15 +38,15 @@ import com.paytm.pgplus.theia.emiSubvention.constants.ResponseMessage;
 import com.paytm.pgplus.theia.emiSubvention.model.PaymentDetails;
 import com.paytm.pgplus.theia.emiSubvention.model.request.banks.EmiBanksRequest;
 import com.paytm.pgplus.theia.emiSubvention.model.request.tenures.EmiTenuresRequest;
-import com.paytm.pgplus.theia.emiSubvention.model.request.validate.ValidateEmiRequest;
+//import com.paytm.pgplus.theia.emiSubvention.model.request.validate.ValidateEmiRequest;
 import com.paytm.pgplus.theia.emiSubvention.model.request.validate.ValidateEmiRequestBody;
-import com.paytm.pgplus.theia.emiSubvention.model.response.banks.EmiBanksResponse;
-import com.paytm.pgplus.theia.emiSubvention.model.response.banks.EmiBanksResponseBody;
-import com.paytm.pgplus.theia.emiSubvention.model.response.tenures.EmiTenuresResponse;
-import com.paytm.pgplus.theia.emiSubvention.model.response.tenures.EmiTenuresResponseBody;
+//import com.paytm.pgplus.theia.emiSubvention.model.response.banks.EmiBanksResponse;
+//import com.paytm.pgplus.theia.emiSubvention.model.response.banks.EmiBanksResponseBody;
+//import com.paytm.pgplus.theia.emiSubvention.model.response.tenures.EmiTenuresResponse;
+//import com.paytm.pgplus.theia.emiSubvention.model.response.tenures.EmiTenuresResponseBody;
 import com.paytm.pgplus.theia.emiSubvention.model.response.validate.ValidateEmiResponse;
 import com.paytm.pgplus.theia.emiSubvention.model.response.validate.ValidateEmiResponseBody;
-import com.paytm.pgplus.theia.emiSubvention.util.EmiSubventionUtils;
+//import com.paytm.pgplus.theia.emiSubvention.util.EmiSubventionUtils;
 import com.paytm.pgplus.theia.exceptions.PaymentRequestValidationException;
 import com.paytm.pgplus.theia.models.ExpressCardTokenRequest;
 import com.paytm.pgplus.theia.models.IdentifierPaymentOption;
@@ -326,215 +326,249 @@ public class SubventionEmiServiceHelper {
         return tenuresRequest;
     }
 
-    public EmiBanksResponse prepareBanksEmiResponse(GenericEmiSubventionResponse<BanksResponse> banksResponse,
-            EmiBanksRequest request) {
-        EmiBanksResponse emiBanksResponse = new EmiBanksResponse();
-        emiBanksResponse.setHead(EmiSubventionUtils.createResponseHeader());
-        emiBanksResponse.setBody(new EmiBanksResponseBody());
-        emiBanksResponse.getHead().setRequestId(request.getHead().getRequestId());
+    // public EmiBanksResponse
+    // prepareBanksEmiResponse(GenericEmiSubventionResponse<BanksResponse>
+    // banksResponse,
+    // EmiBanksRequest request) {
+    // EmiBanksResponse emiBanksResponse = new EmiBanksResponse();
+    // emiBanksResponse.setHead(EmiSubventionUtils.createResponseHeader());
+    // emiBanksResponse.setBody(new EmiBanksResponseBody());
+    // emiBanksResponse.getHead().setRequestId(request.getHead().getRequestId());
+    //
+    // if (banksResponse != null && banksResponse.getStatus() == 0) {
+    // LOGGER.error("banks EMI failure response {}", emiBanksResponse);
+    // throw new BaseException(new
+    // ResultInfo(ResultCode.FAILED.getResultStatus(), banksResponse.getError()
+    // .getCode(), banksResponse.getError().getCode(),
+    // banksResponse.getError().getMessage()));
+    // }
+    //
+    // emiBanksResponse.getBody().setEmiTypes(banksResponse.getData().getEmiTypes());
+    // return emiBanksResponse;
+    // }
 
-        if (banksResponse != null && banksResponse.getStatus() == 0) {
-            LOGGER.error("banks EMI failure response {}", emiBanksResponse);
-            throw new BaseException(new ResultInfo(ResultCode.FAILED.getResultStatus(), banksResponse.getError()
-                    .getCode(), banksResponse.getError().getCode(), banksResponse.getError().getMessage()));
-        }
+    // public EmiTenuresResponse
+    // prepareTenuresEmiResponse(GenericEmiSubventionResponse<TenuresResponse>
+    // tenuresResponse,
+    // EmiTenuresRequest request) {
+    //
+    // EmiTenuresResponse emiTenuresResponse = new EmiTenuresResponse();
+    // EmiTenuresResponseBody emiTenuresResponseBody = new
+    // EmiTenuresResponseBody();
+    //
+    // emiTenuresResponse.setHead(EmiSubventionUtils.createResponseHeader());
+    // emiTenuresResponse.getHead().setRequestId(request.getHead().getRequestId());
+    //
+    // if (tenuresResponse != null && tenuresResponse.getStatus() == 0) {
+    // LOGGER.error("tenures EMI failure response {}", emiTenuresResponse);
+    // throw new BaseException(new
+    // ResultInfo(ResultCode.FAILED.getResultStatus(),
+    // tenuresResponse.getError()
+    // .getCode(), tenuresResponse.getError().getCode(),
+    // tenuresResponse.getError().getMessage()));
+    // }
+    // emiTenuresResponseBody.setBankName(tenuresResponse.getData().getBankName());
+    // emiTenuresResponseBody.setBankCode(tenuresResponse.getData().getBankCode());
+    // emiTenuresResponseBody.setCardType(tenuresResponse.getData().getCardType());
+    // emiTenuresResponseBody.setBankLogoUrl(tenuresResponse.getData().getBankLogoUrl());
+    // emiTenuresResponseBody.setPlanDetails(tenuresResponse.getData().getPlanDetails());
+    // emiTenuresResponse.setBody(emiTenuresResponseBody);
+    //
+    // List<PlanDetail> planDetails =
+    // tenuresResponse.getData().getPlanDetails();
+    // Double discountedGratifiedAmount;
+    // Double nonDiscountedAmount = 0.0;
+    // Double providedNonDiscountedAmount = 0.0;
+    // Double nonDiscountedAmountWithOriginalPrice = 0.0;
+    // if (CollectionUtils.isEmpty(request.getBody().getItems())) {
+    // providedNonDiscountedAmount = request.getBody().getPrice();
+    // } else {
+    // nonDiscountedAmount = totalCalculatedPrice(request.getBody().getItems());
+    // nonDiscountedAmountWithOriginalPrice =
+    // totalCalculatedPriceWithOriginalPrice(request.getBody().getItems());
+    // }
+    // Double providedNonDiscountedAmountTemp;
+    // Double nonDiscountedAmountTemp;
+    // if (planDetails.size() > 0) {
+    // for (int i = 0; i < planDetails.size(); i++) {
+    // /*
+    // * setting subvention/standardId in itrmBreakupList
+    // */
+    //
+    // providedNonDiscountedAmountTemp = providedNonDiscountedAmount;
+    // nonDiscountedAmountTemp = nonDiscountedAmount;
+    // List<ItemBreakUp> itemBreakUpList = planDetails.get(i).getItemBreakUp();
+    // if (!CollectionUtils.isEmpty(itemBreakUpList)) {
+    // for (ItemBreakUp item : itemBreakUpList) {
+    // if (item.getId().contains("SUB")) {
+    // item.setId("SUBVENTION");
+    // } else if (item.getId().contains("STAN")) {
+    // item.setId("STANDARD");
+    // }
+    // }
+    // }
+    // /*
+    // * setting providedNonDiscountedAmount/nonDiscountedAmount as
+    // * originalPrice of the order for the tenures on which offer is
+    // * not applicable
+    // */
+    // if (!CollectionUtils.isEmpty(request.getBody().getApplicableTenures())
+    // && !request.getBody().getApplicableTenures()
+    // .contains(planDetails.get(i).getInterval().toString())) {
+    // if (!CollectionUtils.isEmpty(request.getBody().getItems())
+    // && nonDiscountedAmountWithOriginalPrice != 0.0) {
+    // nonDiscountedAmount = nonDiscountedAmountWithOriginalPrice;
+    // } else if (request.getBody().isAmountBasedSubvention()
+    // && request.getBody().getOriginalPrice() != 0.0) {
+    // providedNonDiscountedAmount = request.getBody().getOriginalPrice();
+    // }
+    // }
+    // if
+    // ((EmiType.STANDARD).equals(tenuresResponse.getData().getPlanDetails().get(i).getEmiType()))
+    // {
+    // if (!StringUtils.isBlank(String.valueOf(providedNonDiscountedAmount))
+    // && providedNonDiscountedAmount > 0) {
+    // emiTenuresResponse.getBody().getPlanDetails().get(i)
+    // .setFinalTransactionAmount(String.valueOf(providedNonDiscountedAmount));
+    // } else {
+    // emiTenuresResponse.getBody().getPlanDetails().get(i)
+    // .setFinalTransactionAmount(String.valueOf(nonDiscountedAmount));
+    // }
+    // } else if
+    // ((EmiType.SUBVENTION).equals(tenuresResponse.getData().getPlanDetails().get(i).getEmiType()))
+    // {
+    // // gratification size equal
+    // discountedGratifiedAmount =
+    // getGratifiedDiscountAmount(tenuresResponse.getData().getPlanDetails()
+    // .get(i).getGratifications());
+    //
+    // if (CollectionUtils.isEmpty(request.getBody().getItems())) {
+    // emiTenuresResponse
+    // .getBody()
+    // .getPlanDetails()
+    // .get(i)
+    // .setFinalTransactionAmount(
+    // String.valueOf(providedNonDiscountedAmount - discountedGratifiedAmount));
+    // } else {
+    // emiTenuresResponse
+    // .getBody()
+    // .getPlanDetails()
+    // .get(i)
+    // .setFinalTransactionAmount(
+    // String.valueOf(nonDiscountedAmount - discountedGratifiedAmount));
+    // }
+    // }
+    // providedNonDiscountedAmount = providedNonDiscountedAmountTemp;
+    // nonDiscountedAmount = nonDiscountedAmountTemp;
+    // }
+    // }
+    // return emiTenuresResponse;
+    // }
 
-        emiBanksResponse.getBody().setEmiTypes(banksResponse.getData().getEmiTypes());
-        return emiBanksResponse;
-    }
-
-    public EmiTenuresResponse prepareTenuresEmiResponse(GenericEmiSubventionResponse<TenuresResponse> tenuresResponse,
-            EmiTenuresRequest request) {
-
-        EmiTenuresResponse emiTenuresResponse = new EmiTenuresResponse();
-        EmiTenuresResponseBody emiTenuresResponseBody = new EmiTenuresResponseBody();
-
-        emiTenuresResponse.setHead(EmiSubventionUtils.createResponseHeader());
-        emiTenuresResponse.getHead().setRequestId(request.getHead().getRequestId());
-
-        if (tenuresResponse != null && tenuresResponse.getStatus() == 0) {
-            LOGGER.error("tenures EMI failure response {}", emiTenuresResponse);
-            throw new BaseException(new ResultInfo(ResultCode.FAILED.getResultStatus(), tenuresResponse.getError()
-                    .getCode(), tenuresResponse.getError().getCode(), tenuresResponse.getError().getMessage()));
-        }
-        emiTenuresResponseBody.setBankName(tenuresResponse.getData().getBankName());
-        emiTenuresResponseBody.setBankCode(tenuresResponse.getData().getBankCode());
-        emiTenuresResponseBody.setCardType(tenuresResponse.getData().getCardType());
-        emiTenuresResponseBody.setBankLogoUrl(tenuresResponse.getData().getBankLogoUrl());
-        emiTenuresResponseBody.setPlanDetails(tenuresResponse.getData().getPlanDetails());
-        emiTenuresResponse.setBody(emiTenuresResponseBody);
-
-        List<PlanDetail> planDetails = tenuresResponse.getData().getPlanDetails();
-        Double discountedGratifiedAmount;
-        Double nonDiscountedAmount = 0.0;
-        Double providedNonDiscountedAmount = 0.0;
-        Double nonDiscountedAmountWithOriginalPrice = 0.0;
-        if (CollectionUtils.isEmpty(request.getBody().getItems())) {
-            providedNonDiscountedAmount = request.getBody().getPrice();
-        } else {
-            nonDiscountedAmount = totalCalculatedPrice(request.getBody().getItems());
-            nonDiscountedAmountWithOriginalPrice = totalCalculatedPriceWithOriginalPrice(request.getBody().getItems());
-        }
-        Double providedNonDiscountedAmountTemp;
-        Double nonDiscountedAmountTemp;
-        if (planDetails.size() > 0) {
-            for (int i = 0; i < planDetails.size(); i++) {
-                /*
-                 * setting subvention/standardId in itrmBreakupList
-                 */
-
-                providedNonDiscountedAmountTemp = providedNonDiscountedAmount;
-                nonDiscountedAmountTemp = nonDiscountedAmount;
-                List<ItemBreakUp> itemBreakUpList = planDetails.get(i).getItemBreakUp();
-                if (!CollectionUtils.isEmpty(itemBreakUpList)) {
-                    for (ItemBreakUp item : itemBreakUpList) {
-                        if (item.getId().contains("SUB")) {
-                            item.setId("SUBVENTION");
-                        } else if (item.getId().contains("STAN")) {
-                            item.setId("STANDARD");
-                        }
-                    }
-                }
-                /*
-                 * setting providedNonDiscountedAmount/nonDiscountedAmount as
-                 * originalPrice of the order for the tenures on which offer is
-                 * not applicable
-                 */
-                if (!CollectionUtils.isEmpty(request.getBody().getApplicableTenures())
-                        && !request.getBody().getApplicableTenures()
-                                .contains(planDetails.get(i).getInterval().toString())) {
-                    if (!CollectionUtils.isEmpty(request.getBody().getItems())
-                            && nonDiscountedAmountWithOriginalPrice != 0.0) {
-                        nonDiscountedAmount = nonDiscountedAmountWithOriginalPrice;
-                    } else if (request.getBody().isAmountBasedSubvention()
-                            && request.getBody().getOriginalPrice() != 0.0) {
-                        providedNonDiscountedAmount = request.getBody().getOriginalPrice();
-                    }
-                }
-                if ((EmiType.STANDARD).equals(tenuresResponse.getData().getPlanDetails().get(i).getEmiType())) {
-                    if (!StringUtils.isBlank(String.valueOf(providedNonDiscountedAmount))
-                            && providedNonDiscountedAmount > 0) {
-                        emiTenuresResponse.getBody().getPlanDetails().get(i)
-                                .setFinalTransactionAmount(String.valueOf(providedNonDiscountedAmount));
-                    } else {
-                        emiTenuresResponse.getBody().getPlanDetails().get(i)
-                                .setFinalTransactionAmount(String.valueOf(nonDiscountedAmount));
-                    }
-                } else if ((EmiType.SUBVENTION).equals(tenuresResponse.getData().getPlanDetails().get(i).getEmiType())) {
-                    // gratification size equal
-                    discountedGratifiedAmount = getGratifiedDiscountAmount(tenuresResponse.getData().getPlanDetails()
-                            .get(i).getGratifications());
-
-                    if (CollectionUtils.isEmpty(request.getBody().getItems())) {
-                        emiTenuresResponse
-                                .getBody()
-                                .getPlanDetails()
-                                .get(i)
-                                .setFinalTransactionAmount(
-                                        String.valueOf(providedNonDiscountedAmount - discountedGratifiedAmount));
-                    } else {
-                        emiTenuresResponse
-                                .getBody()
-                                .getPlanDetails()
-                                .get(i)
-                                .setFinalTransactionAmount(
-                                        String.valueOf(nonDiscountedAmount - discountedGratifiedAmount));
-                    }
-                }
-                providedNonDiscountedAmount = providedNonDiscountedAmountTemp;
-                nonDiscountedAmount = nonDiscountedAmountTemp;
-            }
-        }
-        return emiTenuresResponse;
-    }
-
-    public ValidateEmiResponse prepareValidateEmiResponse(
-            GenericEmiSubventionResponse<ValidateResponse> validateEmiServiceResponse, ValidateEmiRequest request,
-            ValidateRequest validateRequest) {
-        ValidateEmiResponse validateEmiResponse = new ValidateEmiResponse();
-        validateEmiResponse.setHead(EmiSubventionUtils.createResponseHeader());
-        validateEmiResponse.setBody(new ValidateEmiResponseBody());
-        validateEmiResponse.getHead().setRequestId(request.getHead().getRequestId());
-
-        if (validateEmiServiceResponse != null && validateEmiServiceResponse.getStatus() == 0) {
-            LOGGER.error("Validate EMI failure response {}", validateEmiServiceResponse);
-            throw new BaseException(new ResultInfo(ResultCode.FAILED.getResultStatus(), validateEmiServiceResponse
-                    .getError().getCode(), validateEmiServiceResponse.getError().getCode(), validateEmiServiceResponse
-                    .getError().getMessage()));
-        }
-        validateEmiResponse.getBody().setBankId(validateEmiServiceResponse.getData().getBankId());
-        validateEmiResponse.getBody().setBankName(validateEmiServiceResponse.getData().getBankName());
-        validateEmiResponse.getBody().setBankCode(validateEmiServiceResponse.getData().getBankCode());
-        validateEmiResponse.getBody().setCardType(validateEmiServiceResponse.getData().getCardType());
-        validateEmiResponse.getBody().setBankLogoUrl(validateEmiServiceResponse.getData().getBankLogoUrl());
-        validateEmiResponse.getBody().setPlanId(validateEmiServiceResponse.getData().getPlanId());
-        validateEmiResponse.getBody().setPgPlanId(validateEmiServiceResponse.getData().getPgPlanId());
-        validateEmiResponse.getBody().setRate(String.valueOf(validateEmiServiceResponse.getData().getRate()));
-        validateEmiResponse.getBody().setInterval(String.valueOf(validateEmiServiceResponse.getData().getInterval()));
-        // emi data type to be decided
-        validateEmiResponse.getBody().setEmi(String.valueOf(validateEmiServiceResponse.getData().getEmi()));
-        validateEmiResponse.getBody().setInterest(String.valueOf(validateEmiServiceResponse.getData().getInterest()));
-        validateEmiResponse.getBody().setEmiType(validateEmiServiceResponse.getData().getEmiType().getType());
-        validateEmiResponse.getBody().setEmiLabel(validateEmiServiceResponse.getData().getEmiLabel());
-        // set emiSubventedTransactionAmount
-        Double discountedGratifiedAmount = getGratifiedDiscountAmount(validateEmiServiceResponse.getData()
-                .getGratifications());
-        Map<String, String> items = validateRequest.getItems().stream()
-                .filter(item -> org.apache.commons.lang3.StringUtils.isNotEmpty(item.getBrandId()))
-                .collect(Collectors.toMap(Item::getId, Item::getBrandId));
-        discountedGratifiedAmount = updateGratificationAmountForSpecificBanks(validateEmiResponse,
-                validateEmiServiceResponse, discountedGratifiedAmount, items);
-        validateEmiResponse.getBody().setGratifications(validateEmiServiceResponse.getData().getGratifications());
-        validateEmiResponse.getBody().setItemBreakUpList(validateEmiServiceResponse.getData().getItemBreakUp());
-        List<Item> itemList = validateRequest.getItems();
-        Double providedNonDiscountedAmount = 0.0;
-
-        List<ItemBreakUp> itemBreakUpList = validateEmiServiceResponse.getData().getItemBreakUp();
-        if (!CollectionUtils.isEmpty(itemBreakUpList)) {
-            for (ItemBreakUp item : itemBreakUpList) {
-                if (item.getId().contains("SUB")) {
-                    item.setId("SUBVENTION");
-                } else if (item.getId().contains("STAN")) {
-                    item.setId("STANDARD");
-                }
-            }
-        }
-
-        if (CollectionUtils.isEmpty(request.getBody().getItems())) {
-            providedNonDiscountedAmount = request.getBody().getPrice();
-            validateEmiResponse.getBody().setFinalTransactionAmount(
-                    AmountUtils.formatNumberToTwoDecimalPlaces(String.valueOf(providedNonDiscountedAmount
-                            - discountedGratifiedAmount)));
-        } else {
-            validateEmiResponse.getBody().setFinalTransactionAmount(
-                    AmountUtils.formatNumberToTwoDecimalPlaces(String.valueOf(request.getBody().getPaymentDetails()
-                            .getTotalTransactionAmount()
-                            - discountedGratifiedAmount)));
-        }
-
-        Map<String, Object> emiSubventionRedisData = new HashMap<>();
-        if (request.getBody().isGenerateTokenForIntent()) {
-            if (SUBVENTION.equals(validateEmiServiceResponse.getData().getEmiType().getType())) {
-                emiSubventionRedisData.put(VALIDATE_EMI_RESPONSE, validateEmiServiceResponse.getData());
-                emiSubventionRedisData.put(VALIDATE_EMI_REQUEST, validateRequest);
-                emiSubventionRedisData.put(EMI_SUBVENTED_TRANSACTION_AMOUNT, AmountUtils
-                        .formatNumberToTwoDecimalPlaces(validateEmiResponse.getBody().getFinalTransactionAmount()));
-                emiSubventionRedisData.put(EMI_SUBVENTION_CUSTOMER_ID, request.getBody().getCustomerId());
-
-                // persist in redis the validateEmiResponse with emiToken
-                String emiSubventionToken = UUID.randomUUID().toString().replace("-", "") + System.currentTimeMillis();
-                theiaSessionRedisUtil.set(emiSubventionToken, emiSubventionRedisData, EMI_SUBVENTION_EXPIRY_TIME);
-                validateEmiResponse.getBody().setEmiSubventionToken(emiSubventionToken);
-                LOGGER.info("emiSubvention token generated is {}", emiSubventionToken);
-            } else {
-                throw new RequestValidationException(new ResultInfo(ResultCode.FAILED.getResultStatus(),
-                        ResultCode.FAILED.getResultCodeId(), ResultCode.FAILED.getResultMsg(),
-                        EMI_SUBVENTION_NOT_APPLICABLE));
-            }
-        }
-
-        return validateEmiResponse;
-    }
+    // public ValidateEmiResponse prepareValidateEmiResponse(
+    // GenericEmiSubventionResponse<ValidateResponse>
+    // validateEmiServiceResponse, ValidateEmiRequest request,
+    // ValidateRequest validateRequest) {
+    // ValidateEmiResponse validateEmiResponse = new ValidateEmiResponse();
+    // validateEmiResponse.setHead(EmiSubventionUtils.createResponseHeader());
+    // validateEmiResponse.setBody(new ValidateEmiResponseBody());
+    // validateEmiResponse.getHead().setRequestId(request.getHead().getRequestId());
+    //
+    // if (validateEmiServiceResponse != null &&
+    // validateEmiServiceResponse.getStatus() == 0) {
+    // LOGGER.error("Validate EMI failure response {}",
+    // validateEmiServiceResponse);
+    // throw new BaseException(new
+    // ResultInfo(ResultCode.FAILED.getResultStatus(),
+    // validateEmiServiceResponse
+    // .getError().getCode(), validateEmiServiceResponse.getError().getCode(),
+    // validateEmiServiceResponse
+    // .getError().getMessage()));
+    // }
+    // validateEmiResponse.getBody().setBankId(validateEmiServiceResponse.getData().getBankId());
+    // validateEmiResponse.getBody().setBankName(validateEmiServiceResponse.getData().getBankName());
+    // validateEmiResponse.getBody().setBankCode(validateEmiServiceResponse.getData().getBankCode());
+    // validateEmiResponse.getBody().setCardType(validateEmiServiceResponse.getData().getCardType());
+    // validateEmiResponse.getBody().setBankLogoUrl(validateEmiServiceResponse.getData().getBankLogoUrl());
+    // validateEmiResponse.getBody().setPlanId(validateEmiServiceResponse.getData().getPlanId());
+    // validateEmiResponse.getBody().setPgPlanId(validateEmiServiceResponse.getData().getPgPlanId());
+    // validateEmiResponse.getBody().setRate(String.valueOf(validateEmiServiceResponse.getData().getRate()));
+    // validateEmiResponse.getBody().setInterval(String.valueOf(validateEmiServiceResponse.getData().getInterval()));
+    // // emi data type to be decided
+    // validateEmiResponse.getBody().setEmi(String.valueOf(validateEmiServiceResponse.getData().getEmi()));
+    // validateEmiResponse.getBody().setInterest(String.valueOf(validateEmiServiceResponse.getData().getInterest()));
+    // validateEmiResponse.getBody().setEmiType(validateEmiServiceResponse.getData().getEmiType().getType());
+    // validateEmiResponse.getBody().setEmiLabel(validateEmiServiceResponse.getData().getEmiLabel());
+    // // set emiSubventedTransactionAmount
+    // Double discountedGratifiedAmount =
+    // getGratifiedDiscountAmount(validateEmiServiceResponse.getData()
+    // .getGratifications());
+    // Map<String, String> items = validateRequest.getItems().stream()
+    // .filter(item ->
+    // org.apache.commons.lang3.StringUtils.isNotEmpty(item.getBrandId()))
+    // .collect(Collectors.toMap(Item::getId, Item::getBrandId));
+    // discountedGratifiedAmount =
+    // updateGratificationAmountForSpecificBanks(validateEmiResponse,
+    // validateEmiServiceResponse, discountedGratifiedAmount, items);
+    // validateEmiResponse.getBody().setGratifications(validateEmiServiceResponse.getData().getGratifications());
+    // validateEmiResponse.getBody().setItemBreakUpList(validateEmiServiceResponse.getData().getItemBreakUp());
+    // List<Item> itemList = validateRequest.getItems();
+    // Double providedNonDiscountedAmount = 0.0;
+    //
+    // List<ItemBreakUp> itemBreakUpList =
+    // validateEmiServiceResponse.getData().getItemBreakUp();
+    // if (!CollectionUtils.isEmpty(itemBreakUpList)) {
+    // for (ItemBreakUp item : itemBreakUpList) {
+    // if (item.getId().contains("SUB")) {
+    // item.setId("SUBVENTION");
+    // } else if (item.getId().contains("STAN")) {
+    // item.setId("STANDARD");
+    // }
+    // }
+    // }
+    //
+    // if (CollectionUtils.isEmpty(request.getBody().getItems())) {
+    // providedNonDiscountedAmount = request.getBody().getPrice();
+    // validateEmiResponse.getBody().setFinalTransactionAmount(
+    // AmountUtils.formatNumberToTwoDecimalPlaces(String.valueOf(providedNonDiscountedAmount
+    // - discountedGratifiedAmount)));
+    // } else {
+    // validateEmiResponse.getBody().setFinalTransactionAmount(
+    // AmountUtils.formatNumberToTwoDecimalPlaces(String.valueOf(request.getBody().getPaymentDetails()
+    // .getTotalTransactionAmount()
+    // - discountedGratifiedAmount)));
+    // }
+    //
+    // Map<String, Object> emiSubventionRedisData = new HashMap<>();
+    // if (request.getBody().isGenerateTokenForIntent()) {
+    // if
+    // (SUBVENTION.equals(validateEmiServiceResponse.getData().getEmiType().getType()))
+    // {
+    // emiSubventionRedisData.put(VALIDATE_EMI_RESPONSE,
+    // validateEmiServiceResponse.getData());
+    // emiSubventionRedisData.put(VALIDATE_EMI_REQUEST, validateRequest);
+    // emiSubventionRedisData.put(EMI_SUBVENTED_TRANSACTION_AMOUNT, AmountUtils
+    // .formatNumberToTwoDecimalPlaces(validateEmiResponse.getBody().getFinalTransactionAmount()));
+    // emiSubventionRedisData.put(EMI_SUBVENTION_CUSTOMER_ID,
+    // request.getBody().getCustomerId());
+    //
+    // // persist in redis the validateEmiResponse with emiToken
+    // String emiSubventionToken = UUID.randomUUID().toString().replace("-", "")
+    // + System.currentTimeMillis();
+    // theiaSessionRedisUtil.set(emiSubventionToken, emiSubventionRedisData,
+    // EMI_SUBVENTION_EXPIRY_TIME);
+    // validateEmiResponse.getBody().setEmiSubventionToken(emiSubventionToken);
+    // LOGGER.info("emiSubvention token generated is {}", emiSubventionToken);
+    // } else {
+    // throw new RequestValidationException(new
+    // ResultInfo(ResultCode.FAILED.getResultStatus(),
+    // ResultCode.FAILED.getResultCodeId(), ResultCode.FAILED.getResultMsg(),
+    // EMI_SUBVENTION_NOT_APPLICABLE));
+    // }
+    // }
+    //
+    // return validateEmiResponse;
+    // }
 
     private Double updateGratificationAmountForSpecificBanks(ValidateEmiResponse response,
             GenericEmiSubventionResponse<ValidateResponse> validateEmiServiceResponse,
