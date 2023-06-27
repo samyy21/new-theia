@@ -10,7 +10,7 @@ import com.paytm.pgplus.response.ResponseHeader;
 import com.paytm.pgplus.theia.constants.TheiaConstant;
 import com.paytm.pgplus.theia.enums.ELitePayViewDisabledReasonMsg;
 //import com.paytm.pgplus.theia.models.NativeJsonResponse;
-import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
+//import com.paytm.pgplus.theia.models.NativeJsonResponseBody;
 import com.paytm.pgplus.theia.nativ.model.enhancenative.BankRedirectionDetail;
 import com.paytm.pgplus.theia.nativ.model.payview.response.BankCard;
 import com.paytm.pgplus.theia.nativ.model.payview.response.NativeCashierInfoResponse;

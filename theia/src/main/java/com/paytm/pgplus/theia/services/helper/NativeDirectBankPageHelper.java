@@ -22,7 +22,7 @@ import com.paytm.pgplus.theia.nativ.exception.NativeFlowException;
 import com.paytm.pgplus.theia.nativ.model.common.TokenRequestHeader;
 import com.paytm.pgplus.theia.nativ.model.directpage.*;
 import com.paytm.pgplus.theia.nativ.processor.IRequestProcessor;
-import com.paytm.pgplus.theia.nativ.processor.factory.RequestProcessorFactory;
+//import com.paytm.pgplus.theia.nativ.processor.factory.RequestProcessorFactory;
 import com.paytm.pgplus.theia.nativ.utils.NativeRetryUtil;
 import com.paytm.pgplus.theia.nativ.utils.NativeSessionUtil;
 import com.paytm.pgplus.theia.offline.enums.ResultCode;
@@ -61,8 +61,8 @@ public class NativeDirectBankPageHelper {
     @Autowired
     NativeSessionUtil nativeSessionUtil;
 
-    @Autowired
-    private RequestProcessorFactory requestProcessorFactory;
+    // @Autowired
+    // private RequestProcessorFactory requestProcessorFactory;
 
     @Autowired
     private NativeRetryUtil nativeRetryUtil;
